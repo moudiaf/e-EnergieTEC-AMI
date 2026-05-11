@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # 1. API Backend (MDMS Core)
+  # -------------------------------------------------------------
+  ami-mdms-api:
+    build: .
+    container_name: nigelec-mdms-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=postgres
+      - DB_HOST=timescaledb
+      - DB_USER=nigelec_admin
+      - DB_PASS=SecurePass2026!
+      - DB_NAME=ami_mdms
+      - KAFKA_BROKER=kafka:9092
+      - REDIS_URL=redis://redis-cache:6379
+      - HSM_KMS_ENDPOINT=http://kms-hsm-service:5000
+    depends_on:
+      - timescaledb
+      - kafka
+      - redis-cache
+    restart: always
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 2. Base de Données (PostgreSQL + TimescaleDB pour Time-Series)
+  # -------------------------------------------------------------
+  timescaledb:
+    image: timescale/timescaledb-ha:pg14-latest
+    container_name: nigelec-timescaledb
+    environment:
+      - POSTGRES_USER=nigelec_admin
+      - POSTGRES_PASSWORD=SecurePass2026!
+      - POSTGRES_DB=ami_mdms
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 3. Message Broker (Apache Kafka & Zookeeper) pour HES
+  # -------------------------------------------------------------
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: nigelec-zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - ami-network
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: nigelec-kafka
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    depends_on:
+      - zookeeper
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 4. Cache Temps Réel (Redis)
+  # -------------------------------------------------------------
+  redis-cache:
+    image: redis:7-alpine
+    container_name: nigelec-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 5. Head End System (HES) DLMS/COSEM Gateway (Simulation)
+  # -------------------------------------------------------------
+  he-system-gateway:
+    build: ./services/hes-gateway
+    container_name: nigelec-hes-gateway
+    ports:
+      - "4059:4059" # Port standard DLMS/COSEM
+    environment:
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 6. Service KMS (Key Management System - Simulateur HSM)
+  # -------------------------------------------------------------
+  kms-hsm-service:
+    build: ./services/kms-hsm
+    container_name: nigelec-kms-hsm
+    ports:
+      - "5000:5000"
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 7. ML Fraud Detector (Intelligence Artificielle)
+  # -------------------------------------------------------------
+  ml-fraud-detector:
+    build: ./services/ml-fraud-detector
+    container_name: nigelec-ml-fraud
+    environment:
+      - DB_HOST=timescaledb
+      - DB_USER=nigelec_admin
+      - DB_PASS=SecurePass2026!
+      - DB_NAME=ami_mdms
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - timescaledb
+      - kafka
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 8. IAM OIDC Provider (Simulation Active Directory / Keycloak)
+  # -------------------------------------------------------------
+  iam-keycloak-mock:
+    build: ./services/iam-keycloak-mock
+    container_name: nigelec-iam-keycloak
+    ports:
+      - "8080:8080"
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 9. ERP CIM Gateway (Core Banking ISO8583 & SAP Integration)
+  # -------------------------------------------------------------
+  erp-cim-gateway:
+    build: ./services/erp-cim-gateway
+    container_name: nigelec-erp-cim
+    ports:
+      - "7000:7000"
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 10. ZTP Provisioner (Zero-Touch Provisioning Emulator)
+  # -------------------------------------------------------------
+  ztp-provisioner:
+    build: ./services/ztp-provisioner
+    container_name: nigelec-ztp
+    depends_on:
+      - erp-cim-gateway
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 11. Edge Security Gateway (TLS 1.3 / DTLS Nginx Proxy)
+  # -------------------------------------------------------------
+  edge-tls-gateway:
+    image: nginx:alpine
+    container_name: nigelec-tls-gateway
+    ports:
+      - "443:443"
+    networks:
+      - ami-network
+
+networks:
+  ami-network:
+    driver: bridge
+
+volumes:
+  pgdata:

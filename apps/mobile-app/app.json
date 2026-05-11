@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "e-EnergieTEC",
+    "slug": "e-energietec-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0b"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nigelec.e-energietec"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0b"
+      },
+      "package": "com.nigelec.e_energietec"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "https://api.nigelec-ami.ne",
+      "eas": {
+        "projectId": "7f8e9d0c-1b2a-3c4d-5e6f-7a8b9c0d1e2f"
+      }
+    }
+  }
+}

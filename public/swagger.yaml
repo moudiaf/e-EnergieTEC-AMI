@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: e-EnergieTEC AMI - NIGELEC Developer Portal
+  description: |
+    API de gestion de l'infrastructure de comptage intelligent pour la NIGELEC.
+    Cette API permet d'interagir avec les compteurs STS, les concentrateurs DCU et le système de facturation.
+    
+    ### Authentification
+    Toutes les requêtes nécessitent un token JWT dans le header `Authorization`.
+    Exemple : `Authorization: Bearer <your_jwt_token>`
+  version: 2.4.0
+  contact:
+    name: Direction Informatique NIGELEC
+    email: support.it@nigelec.ne
+servers:
+  - url: https://api.nigelec.ne/v2
+    description: Serveur de Production National
+  - url: http://localhost:3001
+    description: Environnement de Développement Local
+
+paths:
+  /meters:
+    get:
+      tags:
+        - Meters
+      summary: Liste tous les compteurs AMI installés
+      responses:
+        '200':
+          description: Succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Meter'
+  
+  /meters/{id}/credit:
+    post:
+      tags:
+        - STS Prepaid
+      summary: Générer un token de recharge pour un compteur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 5000
+      responses:
+        '200':
+          description: Token généré avec succès
+  
+  /dcus:
+    get:
+      tags:
+        - Infrastructure
+      summary: Liste des concentrateurs de données actifs
+      responses:
+        '200':
+          description: Succès
+
+components:
+  schemas:
+    Meter:
+      type: object
+      properties:
+        id:
+          type: string
+        serialNumber:
+          type: string
+        status:
+          type: string
+          enum: [online, warning, offline, danger]
+        credit:
+          type: number
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

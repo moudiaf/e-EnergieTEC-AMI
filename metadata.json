@@ -1,0 +1,5 @@
+{
+  "name": "AMI Smart Meter STS",
+  "description": "Système de gestion de compteurs intelligents avec prépaiement STS (Standard Transfer Specification).",
+  "requestFramePermissions": []
+}

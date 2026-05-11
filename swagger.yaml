@@ -1,0 +1,122 @@
+openapi: 3.0.0
+info:
+  title: API e-EnergieTEC (NIGELEC)
+  description: Interface de gestion intelligente des compteurs (AMI) et prépaiement STS pour le réseau NIGELEC.
+  version: 1.0.0
+  contact:
+    name: Support Technique NIGELEC
+    email: support@nigelec.ne
+
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur de Développement Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id: { type: string, example: "C001" }
+        name: { type: string, example: "Ibrahim Moussa" }
+        email: { type: string, format: email, example: "i***@ni****.ne" }
+        phone: { type: string, example: "+227 90 ** ** 12" }
+        type: { type: string, enum: [domestic, commercial, industrial, social] }
+        status: { type: string, enum: [active, inactive, suspended] }
+
+    Meter:
+      type: object
+      properties:
+        id: { type: string, example: "541-234-567" }
+        customerId: { type: string }
+        type: { type: string }
+        credit: { type: number, example: 45.20 }
+        status: { type: string, enum: [online, warning, offline, danger] }
+        protocol: { type: string, example: "DLMS/COSEM" }
+
+    Token:
+      type: object
+      properties:
+        id: { type: string }
+        token: { type: string, description: "Jeton STS 20 chiffres", example: "1234 5678 9012 3456 7890" }
+        amount: { type: number }
+        meterId: { type: string }
+        type: { type: string, enum: [recharge, key-change, clear-tamper] }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /login:
+    post:
+      summary: Authentification Utilisateur
+      security: []
+      requestBody:
+        required: true
+        content:
+          application: json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Succès
+          content:
+            application: json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user: { $ref: '#/components/schemas/User' }
+
+  /customers:
+    get:
+      summary: Liste des clients
+      description: Retourne tous les clients avec l'emails et téléphones masqués (PII protection).
+      responses:
+        '200':
+          description: Liste récupérée
+          content:
+            application: json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Customer' }
+
+  /meters:
+    get:
+      summary: Liste des compteurs
+      responses:
+        '200':
+          description: Succès
+          content:
+            application: json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Meter' }
+
+  /tokens:
+    post:
+      summary: Génération de Jeton STS
+      requestBody:
+        required: true
+        content:
+          application: json:
+            schema: { $ref: '#/components/schemas/Token' }
+      responses:
+        '201':
+          description: Jeton créé et activé en base de données.
+
+  /mdms/simulate-mass:
+    post:
+      summary: Simulation de Lecture AMI de Masse
+      description: Déclenche la collecte de 96 lectures par compteur avec validation VEE automatique.
+      responses:
+        '200':
+          description: Simulation terminée

@@ -1,0 +1,35 @@
+935: <SidebarItem icon={LayoutDashboard} label="Tableau de bord" active={currentSection === 'dashboard'} onClick={() => setCurrentSection('dashboard')} />
+936: <SidebarItem icon={Microchip} label="Compteurs AMI" active={currentSection === 'meters'} onClick={() => setCurrentSection('meters')} />
+937: <SidebarItem icon={Users} label="Clients & Abonnés" active={currentSection === 'customers'} onClick={() => setCurrentSection('customers')} />
+940: <SidebarItem icon={Key} label="Recharge STS" active={currentSection === 'sts-prepaid'} onClick={() => setCurrentSection('sts-prepaid')} />
+941: <SidebarItem icon={Tags} label="Historique Ventes" active={currentSection === 'tokens'} onClick={() => setCurrentSection('tokens')} />
+942: <SidebarItem icon={Smartphone} label="Portail Marchand" active={currentSection === 'payments'} onClick={() => setCurrentSection('payments')} />
+943: <SidebarItem icon={Receipt} label="Facturation" active={currentSection === 'billing'} onClick={() => setCurrentSection('billing')} />
+946: <SidebarItem icon={MapPin} label="Carte Réseau" active={currentSection === 'map'} onClick={() => setCurrentSection('map')} />
+947: <SidebarItem icon={Headset} label="Tickets Support" active={currentSection === 'tickets'} onClick={() => setCurrentSection('tickets')} />
+948: <SidebarItem icon={AlertTriangle} label="Alertes & Fraudes" active={currentSection === 'alerts'} onClick={() => setCurrentSection('alerts')} badge={alerts.filter(a => a.status === 'unread').length.toString()} />
+949: <SidebarItem icon={Database} label="MDMS Analyse" active={currentSection === 'mdms'} onClick={() => setCurrentSection('mdms')} />
+954: <SidebarItem icon={Shield} label="Journal d'Audit" active={currentSection === 'audit'} onClick={() => setCurrentSection('audit')} />
+955: <SidebarItem icon={Users} label="Gestion des Accès" active={currentSection === 'users'} onClick={() => setCurrentSection('users')} />
+956: <SidebarItem icon={MapPin} label="Régions" active={currentSection === 'regions'} onClick={() => setCurrentSection('regions')} />
+957: <SidebarItem icon={Settings} label="Paramètres" active={currentSection === 'settings'} onClick={() => setCurrentSection('settings')} />
+964: <SidebarItem icon={LayoutDashboard} label="Mon Compteur" active={currentSection === 'customer-dashboard'} onClick={() => setCurrentSection('customer-dashboard')} />
+965: <SidebarItem icon={Key} label="Acheter Unités" active={currentSection === 'sts-prepaid'} onClick={() => setCurrentSection('sts-prepaid')} />
+966: <SidebarItem icon={Receipt} label="Mes Factures" active={currentSection === 'billing'} onClick={() => setCurrentSection('billing')} />
+967: <SidebarItem icon={Headset} label="Support Client" active={currentSection === 'tickets'} onClick={() => setCurrentSection('tickets')} />
+1036: {currentSection === 'dashboard' && (
+1135: {currentSection === 'meters' && (
+1189: {currentSection === 'customers' && (
+1259: {currentSection === 'sts-prepaid' && (
+1338: {currentSection === 'tokens' && (
+1396: {currentSection === 'tickets' && (
+1427: {currentSection === 'alerts' && (
+1454: {currentSection === 'audit' && (
+1483: {currentSection === 'users' && (
+1512: {currentSection === 'mdms' && (
+1650: {currentSection === 'billing' && (
+1740: {currentSection === 'payments' && (
+1805: {currentSection === 'regions' && (
+1822: {currentSection === 'settings' && (
+1843: {currentSection === 'customer-dashboard' && currentUser?.role === 'customer' && (
+1938: {currentSection === 'tickets' && (
