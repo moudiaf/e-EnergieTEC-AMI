@@ -9,12 +9,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(registration => {
-      console.log('SW registered: ', registration);
-    }).catch(registrationError => {
-      console.log('SW registration failed: ', registrationError);
-    });
-  });
-}
+// Service Worker désactivé — Il interceptait les requêtes InsForge Auth
+// et les redirigeait vers /api/login (inexistant sur Netlify).
+// À réactiver uniquement après configuration correcte d'un vrai SW.
+
