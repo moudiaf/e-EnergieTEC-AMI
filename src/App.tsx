@@ -259,6 +259,11 @@ export default function App() {
   // ============================================================
   const getToken = () => localStorage.getItem('ami_jwt_token');
 
+  const getApiUrl = (url: string) => {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    return url.startsWith('http') ? url : `${baseUrl}${url}`;
+  };
+
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const token = getToken();
     const headers: Record<string, string> = {
@@ -267,7 +272,8 @@ export default function App() {
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(url, { ...options, headers });
+    const fullUrl = getApiUrl(url);
+    const res = await fetch(fullUrl, { ...options, headers });
 
     // Auto-logout if token is expired or invalid
     if (res.status === 403 || res.status === 401) {
@@ -399,7 +405,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch('/api/login', {
+      const res = await authFetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUsername, password: loginPassword })
