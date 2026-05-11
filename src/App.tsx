@@ -422,8 +422,8 @@ export default function App() {
       }
 
       if (data.user) {
-        const userRole = data.user.user_metadata?.role || 'admin';
-        const userName = data.user.user_metadata?.name || email.split('@')[0];
+        const userRole = (data.user.metadata?.role as string) || 'admin';
+        const userName = (data.user.metadata?.name as string) || email.split('@')[0];
         
         // On n'utilise plus le localStorage manuel, InsForge gère la session
         setCurrentUser({ id: data.user.id, name: userName, role: userRole });
