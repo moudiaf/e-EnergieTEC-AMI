@@ -1,5 +1,6 @@
 // App Version 4.4.2 - Nigelec Edition
 import React, { useState, useEffect, useMemo } from 'react';
+import { insforge } from './lib/insforge';
 import {
   Bolt,
   LayoutDashboard,
@@ -405,41 +406,51 @@ export default function App() {
     }
 
     try {
-      const res = await authFetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword })
+      // Compatibilité : si l'utilisateur tape juste "admin", on ajoute @nigelec.ne
+      const email = loginUsername.includes('@') ? loginUsername : `${loginUsername}@nigelec.ne`;
+
+      const { data, error } = await insforge.auth.signInWithPassword({
+        email: email,
+        password: loginPassword,
       });
 
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('ami_jwt_token', data.token);
-        setCurrentUser(data.user);
+      if (error) {
+        addToast(error.message || 'Identifiants invalides', 'error');
+        generateCaptcha();
+        setCaptchaInput('');
+        return;
+      }
+
+      if (data.user) {
+        const userRole = data.user.user_metadata?.role || 'admin';
+        const userName = data.user.user_metadata?.name || email.split('@')[0];
+        
+        // On n'utilise plus le localStorage manuel, InsForge gère la session
+        setCurrentUser({ id: data.user.id, name: userName, role: userRole });
         setIsLoggedIn(true);
-        if (data.user.role === 'customer') {
+
+        if (userRole === 'customer') {
           setCurrentSection('customer-dashboard');
         } else {
           setCurrentSection('dashboard');
         }
-        addToast(`Bienvenue, ${data.user.name} — Session active 8h`, 'success');
-        if (data.user.role === 'vendor') setCurrentSection('sts-prepaid');
-        if (data.user.role === 'tech') setCurrentSection('tickets');
-      } else {
-        addToast(data.message || 'Identifiants invalides', 'error');
-        generateCaptcha();
-        setCaptchaInput('');
+        addToast(`Bienvenue, ${userName} — Authentifié par InsForge`, 'success');
+        
+        if (userRole === 'vendor') setCurrentSection('sts-prepaid');
+        if (userRole === 'tech') setCurrentSection('tickets');
       }
     } catch (err) {
-      addToast('Erreur de connexion au serveur', 'error');
+      addToast('Erreur de connexion au serveur Cloud', 'error');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await insforge.auth.signOut();
     localStorage.removeItem('ami_jwt_token');
     setIsLoggedIn(false);
     setCurrentUser(null);
     setCurrentSection('dashboard');
-    addToast('Déconnexion réussie', 'success');
+    addToast('Déconnexion réussie via InsForge', 'success');
   };
 
   const logAudit = async (action: string, details: string, referenceId?: string) => {
