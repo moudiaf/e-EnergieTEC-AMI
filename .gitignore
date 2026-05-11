@@ -21,3 +21,7 @@ coverage/
 .roo
 .trae
 .windsurf
+
+*.db
+*.sqlite
+*.zip
