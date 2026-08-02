@@ -48,8 +48,10 @@ export const DashboardSection = ({
 
   const total          = meters.length || 1;
   const tauxDispo      = ((onlineMeters  / total) * 100).toFixed(1);
-  const pertesReseau   = (((offlineMeters + warningMeters) / total) * 100).toFixed(1);
+  const pertesReseau   = (100 - Number(tauxDispo)).toFixed(1);
   const pctFraude      = ((tamperMeters  / total) * 100).toFixed(1);
+
+
   const tauxResolution = alerts.length > 0 ? ((resolvedAlerts / alerts.length) * 100).toFixed(1) : '100';
 
   // ─── SEGMENTS CLIENTS (réels) ──────────────────────────────────
@@ -68,9 +70,9 @@ export const DashboardSection = ({
   // ─── CANAUX DE VENTE (réels) ───────────────────────────────────
   const salesByChannel = [
     { name: 'Orange',  value: payments.filter(p => p.operator === 'Orange').reduce((s, p) => s + p.amount, 0),                   color: '#ff6b35' },
-    { name: 'Airtel',  value: payments.filter(p => p.operator === 'Airtel').reduce((s, p) => s + p.amount, 0),                   color: '#ef4444' },
-    { name: 'Digital', value: payments.filter(p => ['NITA','AMANA'].includes(p.operator)).reduce((s, p) => s + p.amount, 0),     color: '#3b82f6' },
-    { name: 'Espèces', value: payments.filter(p => ['CASH','AGENCY'].includes(p.operator)).reduce((s, p) => s + p.amount, 0),    color: '#f59e0b' },
+    { name: 'Airtel',  value: payments.filter(p => p.operator === 'Airtel').reduce((s, p) => s + p.amount, 0),                   color: '#00A651' },
+    { name: 'Portail', value: payments.filter(p => ['NITA','AMANA'].includes(p.operator)).reduce((s, p) => s + p.amount, 0),     color: '#1a1a1a' },
+    { name: 'Agence',  value: payments.filter(p => ['CASH','AGENCY'].includes(p.operator)).reduce((s, p) => s + p.amount, 0),    color: '#262626' },
   ];
 
   // ─── PROFIL DE CHARGE (hémolyse sur tokens) ──────────────────
@@ -103,21 +105,21 @@ export const DashboardSection = ({
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/10 rounded-full blur-[120px] -mr-40 -mt-40 mix-blend-screen" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-niger-green/5 rounded-full blur-[100px] -ml-20 -mb-20 mix-blend-screen" />
 
-        {/* Drapeau Niger */}
-        <div className="absolute top-6 right-8 flex flex-col items-end gap-2 opacity-80">
-          <div className="w-16 h-10 rounded shadow-2xl overflow-hidden border border-white/20 flex flex-col">
-            <div className="h-1/3 bg-[#ff6b35]" />
-            <div className="h-1/3 bg-white flex items-center justify-center">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#ff6b35]" />
-            </div>
-            <div className="h-1/3 bg-[#00A651]" />
-          </div>
-          <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.3em] whitespace-nowrap">République du Niger</p>
-        </div>
-
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div>
             <div className="flex items-center gap-3 mb-4 flex-wrap">
+              {/* Badge République du Niger */}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                <div className="w-5 h-3 rounded-[2px] overflow-hidden flex flex-col border border-white/20">
+                  <div className="h-1/3 bg-[#ff6b35]" />
+                  <div className="h-1/3 bg-white flex items-center justify-center">
+                    <div className="w-1 h-1 rounded-full bg-[#ff6b35]" />
+                  </div>
+                  <div className="h-1/3 bg-[#00A651]" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/90">République du Niger</span>
+              </div>
+
               <div className="px-3 py-1 rounded-full bg-gradient-to-r from-brand/20 to-niger-green/20 border border-brand/30 text-[10px] font-black uppercase text-white tracking-widest animate-pulse">
                 Réseau Intelligent NIGELEC
               </div>
@@ -138,7 +140,7 @@ export const DashboardSection = ({
               )}
             </div>
             <h2 className="text-4xl font-black text-white tracking-tight mb-2 uppercase">
-              Supervision <span className="text-brand">Nationale</span> <span className="text-niger-green">Niger</span>
+              Supervision <span className="text-brand">Nationale</span>
             </h2>
             <p className="text-gray-400 font-medium max-w-xl">
               Analyse en temps réel de la consommation, des ventes STS et de l'intégrité du réseau intelligent nigérien.
@@ -189,8 +191,8 @@ export const DashboardSection = ({
                 <span className="flex items-center gap-2"><span className="w-3 h-0.5 bg-niger-green inline-block rounded" />Production</span>
               </div>
             </div>
-            <div className="h-[300px] w-full" style={{ height: '300px' }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+            <div className="h-[300px] w-full relative overflow-hidden" style={{ minHeight: '300px', minWidth: '0' }}>
+              <ResponsiveContainer width="100%" height={300} debounce={50}>
                 <AreaChart data={hourlyData}>
                   <defs>
                     <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
@@ -228,8 +230,8 @@ export const DashboardSection = ({
               {salesByChannel.every(s => s.value === 0) ? (
                 <div className="h-[160px] flex items-center justify-center text-gray-500 text-sm">Aucun paiement</div>
               ) : (
-                <div className="h-[160px] w-full" style={{ height: '160px' }}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+                <div className="h-[160px] w-full relative overflow-hidden" style={{ minHeight: '160px', minWidth: '0' }}>
+                  <ResponsiveContainer width="100%" height={160} debounce={50}>
                     <BarChart data={salesByChannel} barSize={28}>
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill:'#4b5563',fontSize:10}} />
                       <YAxis axisLine={false} tickLine={false} tick={{fill:'#4b5563',fontSize:9}} />
@@ -310,8 +312,8 @@ export const DashboardSection = ({
               <Users size={20} className="text-brand" />
               Segments Clients
             </h3>
-            <div className="h-[200px] w-full relative" style={{ height: '200px' }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+            <div className="h-[200px] w-full relative overflow-hidden" style={{ minHeight: '200px', minWidth: '0' }}>
+              <ResponsiveContainer width="100%" height={200} debounce={50}>
                 <RePieChart>
                   <Pie
                     data={segmentsData.length > 0 ? segmentsData : [{ name: 'Aucun', value: 1, color: '#ffffff10' }]}

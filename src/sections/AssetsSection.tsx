@@ -38,9 +38,9 @@ export const AssetsSection = ({
 
     const filteredMeters = useMemo(() => stockMeters.filter(m => {
         const matchesFilter = filter === 'all' || m.lifecycleStatus === filter;
-        const matchesSearch = m.id.toLowerCase().includes(search.toLowerCase()) ||
-            (m.serialNumber?.toLowerCase().includes(search.toLowerCase())) ||
-            (m.batchId?.toLowerCase().includes(search.toLowerCase()));
+        const matchesSearch = (m.id || '').toLowerCase().includes(search.toLowerCase()) ||
+            (m.serialNumber || '').toLowerCase().includes(search.toLowerCase()) ||
+            (m.batchId || '').toLowerCase().includes(search.toLowerCase());
         return matchesFilter && matchesSearch;
     }), [stockMeters, filter, search]);
 

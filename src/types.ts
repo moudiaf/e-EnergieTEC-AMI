@@ -15,19 +15,20 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
-  type: 'domestic' | 'commercial' | 'industrial' | 'social';
+  type: 'domestic' | 'commercial' | 'industrial' | 'social' | 'haute_tension' | 'eclairage_public';
   meters: number;
   credit: number;
   address: string;
   joinDate: string;
   status: 'active' | 'inactive' | 'suspended';
+  regionId?: string; // Link to Region for geographic filtering
 }
 
 export interface Meter {
   id: string;
   customerId: string;
   location: string;
-  type: 'domestic' | 'commercial' | 'industrial' | 'social';
+  type: 'domestic' | 'commercial' | 'industrial' | 'social' | 'haute_tension' | 'eclairage_public';
   credit: number;
   status: 'online' | 'warning' | 'offline' | 'danger';
 
@@ -38,7 +39,7 @@ export interface Meter {
   installationDate: string;
   subscribedPower?: number;
   paymentMode?: 'prepaid' | 'postpaid';
-  tamperStatus?: 'clear' | 'tampered';
+  tamperStatus?: 'clear' | 'tampered' | 'detected';
   protocol?: 'Modbus RTU' | 'Modbus TCP' | 'DLMS/COSEM';
   ipAddress?: string;
   macAddress?: string;
@@ -54,7 +55,9 @@ export interface Meter {
   mlFraudScore?: number; // 0-1 score from ML model
   latitude?: number;
   longitude?: number;
-  assignedInstallerId?: string; // NEW: For lifecycle management
+  registeredAt?: string;
+  phaseType?: 'monophase' | 'triphase'; // Single-phase (1φ) or Three-phase (3φ)
+  transformerId?: string; // Link to the power transformer (DTU level)
 }
 
 export interface DCU {
@@ -107,6 +110,8 @@ export interface TariffTier {
   taxeHabitat: number;
   redevance: number;
   vatRate?: number; // NEW: Added for Section 4.3 compliance
+  taxeORNT?: number;
+  taxeMunicipale?: number;
 }
 
 export interface Tariff {
@@ -162,19 +167,33 @@ export interface IntervalData {
   powerFactor: number;
   status: 'valid' | 'estimated' | 'invalid';
   validationNotes: string;
+  // Three-phase specific fields (null for single-phase meters)
+  voltageL1?: number;
+  voltageL2?: number;
+  voltageL3?: number;
+  currentL1?: number;
+  currentL2?: number;
+  currentL3?: number;
+  voltageUnbalance?: number; // % voltage unbalance between phases
 }
 
 export interface MDMSStats {
   totalReadings: number;
-  validationStats: { status: string, count: number }[];
+  validationStats: { status: string; count: number }[];
   peakConsumption: number;
+  energyBalance: {
+    transformerId: string;
+    inputEnergy: number; // Energy delivered by transformer
+    deliveredEnergy: number; // Sum of customer readings
+    lossPercentage: number; // (input - delivered) / input * 100
+  }[];
 }
 
 export interface Alert {
   id: string;
   type: 'warning' | 'danger' | 'success' | 'info';
-  category: 'fraud' | 'maintenance' | 'battery' | 'communication' | 'standard' | 'billing';
-  priority: 'Basse' | 'Moyenne' | 'Haute' | 'Critique';
+  category: 'fraud' | 'maintenance' | 'battery' | 'communication' | 'standard' | 'billing' | 'credit' | 'vending' | 'system';
+  priority: 'Basse' | 'Moyenne' | 'Normale' | 'Haute' | 'Critique';
   title: string;
   message: string;
   timestamp: Date | string;
@@ -203,7 +222,7 @@ export interface Audit {
 export interface User {
   id: string;
   username: string;
-  role: 'admin' | 'manager' | 'vendor' | 'tech' | 'customer' | 'billing';
+  role: 'admin' | 'manager' | 'vendor' | 'tech' | 'customer' | 'billing' | 'auditor';
   name: string;
   associatedCustomerId?: string; // For customer role
 }
@@ -258,6 +277,7 @@ export interface Shift {
   expectedCash: number;
   totalDigital: number;
   status: 'open' | 'closed';
+  cashBalance?: number;
 }
 
 export interface EnergyBalance {

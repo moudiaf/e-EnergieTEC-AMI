@@ -77,15 +77,15 @@ export const calculateRechargeDetails = (amount: number, meter: Meter, allTariff
   }
 
   return {
-    kwh: totalKwh > 0 ? totalKwh : 0,
+    kwh: +(totalKwh > 0 ? totalKwh : 0).toFixed(3),
     primeFixe: basePrime,
-    redevance: baseRedevance + fixedMonthlyFee,
+    redevance: +(baseRedevance + fixedMonthlyFee).toFixed(2),
     taxe: baseTaxHabitat,
-    rate: lastRate,
-    tva: totalTva,
-    netAmount: remainingAmount > 0 ? remainingAmount : 0,
-    taxeORNT: totalORNT,
-    taxeMunicipale: totalMunicipal
+    rate: +lastRate.toFixed(2),
+    tva: +totalTva.toFixed(2),
+    netAmount: +(remainingAmount > 0 ? remainingAmount : 0).toFixed(2),
+    taxeORNT: +totalORNT.toFixed(2),
+    taxeMunicipale: +totalMunicipal.toFixed(2)
   };
 };
 
@@ -155,11 +155,11 @@ export const calculateMonthlyInvoice = (kwhConsumed: number, meter: Meter, allTa
   const vatOnFees = additionalFees * globalVatRate;
 
   return {
-    amountHT: totalHT + additionalFees,
-    tva: totalTVA + vatOnFees,
-    totalTTC: totalHT + additionalFees + totalTVA + vatOnFees + taxeHabitat,
-    kwhConsumed,
-    rate: lastRate,
+    amountHT: +(totalHT + additionalFees).toFixed(2),
+    tva: +(totalTVA + vatOnFees).toFixed(2),
+    totalTTC: +(totalHT + additionalFees + totalTVA + vatOnFees + taxeHabitat).toFixed(2),
+    kwhConsumed: +kwhConsumed.toFixed(3),
+    rate: +lastRate.toFixed(2),
     taxe: taxeHabitat
   };
 };

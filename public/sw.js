@@ -15,7 +15,3 @@ self.addEventListener('activate', (e) => {
     })
   );
 });
-
-self.addEventListener('fetch', (event) => {
-    // Ne rien intercepter, bypass total
-});

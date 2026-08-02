@@ -11,11 +11,29 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const TOKEN_TYPE_STYLES: Record<string, { label: string; bg: string; text: string }> = {
+  'recharge': { label: 'Recharge Crédit', bg: 'bg-green-500/10 border-green-500/20', text: 'text-green-400' },
+  'clear-credit': { label: 'Compensation Crédit', bg: 'bg-red-500/10 border-red-500/20', text: 'text-red-400' },
+  'key-change': { label: 'Changement Clé', bg: 'bg-blue-500/10 border-blue-500/20', text: 'text-blue-400' },
+  'clear-tamper': { label: 'Effacer Alarme', bg: 'bg-amber-500/10 border-amber-500/20', text: 'text-amber-400' },
+  'payment-mode': { label: 'Mode Paiement', bg: 'bg-purple-500/10 border-purple-500/20', text: 'text-purple-400' }
+};
+
 interface TokensSectionProps {
   tokens: Token[];
   handlePrintReceipt: (token: Token) => void;
   addToast: (message: string, type: 'success' | 'error' | 'info') => void;
 }
+
+const parseDateSafe = (ts: any): Date => {
+  if (!ts) return new Date();
+  try {
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? new Date() : d;
+  } catch {
+    return new Date();
+  }
+};
 
 export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSectionProps) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,14 +48,14 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
         t.meterId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.token.includes(searchTerm);
       
-      const matchesDate = !dateFilter || format(new Date(t.timestamp), 'yyyy-MM-dd') === dateFilter;
+      const matchesDate = !dateFilter || format(parseDateSafe(t.timestamp), 'yyyy-MM-dd') === dateFilter;
       
       return matchesSearch && matchesDate;
     });
   }, [tokens, searchTerm, dateFilter]);
 
   // ─── KPIs du jour (sur les tokens filtrés ou tous ?) ────────────
-  const todayTokens = tokens.filter(t => isSameDay(new Date(t.timestamp), new Date()));
+  const todayTokens = tokens.filter(t => isSameDay(parseDateSafe(t.timestamp), new Date()));
   const totalSalesToday = todayTokens.reduce((s, t) => s + t.amount, 0);
   const totalKwhToday   = todayTokens.reduce((s, t) => s + t.kwh, 0);
 
@@ -116,96 +134,113 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
       {/* ── Liste des Transactions ────────────────────────────── */}
       <div className="glass-panel overflow-hidden rounded-[2rem] border-white/5 shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
             <thead>
-              <tr className="bg-white/[0.02] border-b border-white/5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
-                <th className="px-8 py-6">Horodatage</th>
-                <th className="px-8 py-6">ID Compteur</th>
-                <th className="px-8 py-6 text-center">Token STS (20 Digits)</th>
-                <th className="px-8 py-6">Détail Fiscal</th>
-                <th className="px-8 py-6">Énergie / Total</th>
-                <th className="px-8 py-6 text-right">Actions</th>
+              <tr className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                <th className="px-4 py-4">Horodatage / ID</th>
+                <th className="px-4 py-4">ID Compteur</th>
+                <th className="px-4 py-4">Type de Jeton</th>
+                <th className="px-4 py-4 text-center">Token STS (20 Digits)</th>
+                <th className="px-4 py-4">Détail Fiscal</th>
+                <th className="px-4 py-4">Énergie / Total</th>
+                <th className="px-4 py-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="">
               {filteredTokens.length > 0 ? filteredTokens.map(token => (
-                <tr key={token.id} className="hover:bg-brand/[0.02] transition-colors group">
-                  {/* Date */}
-                  <td className="px-8 py-6 whitespace-nowrap">
+                <tr key={token.id} className="group transition-all">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors whitespace-nowrap">
                     <p className="text-sm font-black text-white group-hover:text-brand transition-colors">
                       {format(new Date(token.timestamp), 'dd MMMM yyyy', { locale: fr })}
                     </p>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      {format(new Date(token.timestamp), 'HH:mm:ss')} · {token.id}
+                      {format(new Date(token.timestamp), 'HH:mm:ss')} · <span className="text-gray-600">ID {token.id}</span>
                     </p>
                   </td>
 
-                  {/* Compteur */}
-                  <td className="px-8 py-6">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand/5 border border-brand/20 rounded-xl">
                       <Zap size={12} className="text-brand" />
                       <span className="font-mono text-xs font-black text-brand tracking-wider">{token.meterId}</span>
                     </div>
                   </td>
 
-                  {/* Token */}
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col items-center gap-2">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    {(() => {
+                      const style = TOKEN_TYPE_STYLES[token.type] || { label: token.type || 'Recharge Crédit', bg: 'bg-green-500/10 border-green-500/20', text: 'text-green-400' };
+                      return (
+                        <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border", style.bg, style.text)}>
+                          {style.label}
+                        </span>
+                      );
+                    })()}
+                  </td>
+
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    <div className="flex justify-center">
                       <div 
                         onClick={() => copyToClipboard(token.token)}
-                        className="cursor-pointer font-mono text-lg font-black text-white tracking-[0.3em] bg-white/5 hover:bg-brand/10 hover:border-brand/30 transition-all px-6 py-3 rounded-2xl border border-white/5 flex items-center gap-3 group/token"
+                        className="cursor-pointer font-mono text-[16px] font-black text-white tracking-[0.2em] bg-white/5 hover:bg-brand/10 hover:border-brand/30 transition-all px-5 py-2.5 rounded-xl border border-white/5 flex items-center gap-3 group/token"
                       >
                         {token.token}
-                        <Copy size={16} className="text-gray-600 group-hover/token:text-brand transition-colors" />
+                        <Copy size={14} className="text-gray-600 group-hover/token:text-brand transition-colors" />
                       </div>
                     </div>
                   </td>
 
-                  {/* Détail Fiscal */}
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col gap-1">
-                       <div className="flex justify-between w-full min-w-[120px]">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">TVA:</span>
-                        <span className="text-[10px] font-bold text-red-400">{Math.round(token.tva || 0).toLocaleString()} FCFA</span>
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    {token.type === 'recharge' || !token.type ? (
+                      <div className="flex flex-col gap-1 min-w-[140px]">
+                         <div className="flex justify-between items-center">
+                          <span className="text-[8px] font-black text-gray-500 uppercase">TVA:</span>
+                          <span className="text-[10px] font-bold text-red-400/80">{Math.round(token.tva || 0).toLocaleString()} <span className="text-[7px] text-gray-600 uppercase">FCFA</span></span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[8px] font-black text-gray-500 uppercase">Redevance:</span>
+                          <span className="text-[10px] font-bold text-blue-400/80">{Math.round((token.taxeORNT || 0) + (token.taxeMunicipale || 0)).toLocaleString()} <span className="text-[7px] text-gray-600 uppercase">FCFA</span></span>
+                        </div>
                       </div>
-                      <div className="flex justify-between w-full">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">ORTN:</span>
-                        <span className="text-[10px] font-bold text-blue-400">{Math.round(token.taxeORNT || 0).toLocaleString()} FCFA</span>
-                      </div>
-                      <div className="flex justify-between w-full">
-                        <span className="text-[9px] font-black text-gray-500 uppercase">Municipale:</span>
-                        <span className="text-[10px] font-bold text-yellow-400">{Math.round(token.taxeMunicipale || 0).toLocaleString()} FCFA</span>
-                      </div>
-                    </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">-</span>
+                    )}
                   </td>
 
-                  {/* Montant / Énergie */}
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
-                        <Coins size={20} />
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    {token.type === 'recharge' || !token.type ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 border border-green-500/20">
+                          <Coins size={18} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-white leading-none mb-1">{token.amount.toLocaleString()} <span className="text-[9px] text-gray-500">FCFA</span></p>
+                          <p className="text-[10px] font-black text-green-500 uppercase tracking-widest">{token.kwh.toFixed(1)} kWh Net</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-lg font-black text-white leading-none mb-1">{token.amount.toLocaleString()} <span className="text-[10px] text-gray-500">FCFA</span></p>
-                        <p className="text-xs font-black text-green-500 uppercase tracking-widest">{token.kwh.toFixed(1)} kWh Net</p>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20">
+                          <Info size={18} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-white leading-none mb-1">Technique</p>
+                          <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Gratuit</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
 
-                  {/* Actions */}
-                  <td className="px-8 py-6 text-right">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
                     <button 
                       onClick={() => handlePrintReceipt(token)}
-                      className="inline-flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-brand hover:text-white text-gray-400 rounded-2xl transition-all border border-white/5 hover:border-brand shadow-lg hover:shadow-brand/20 group/print"
+                      className="p-3 bg-white/5 border border-white/10 text-gray-500 hover:text-white rounded-2xl hover:bg-brand hover:border-brand transition-all group/btn shadow-lg"
                     >
-                      <Printer size={16} className="group-hover/print:scale-110 transition-transform"/>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Récupérer Reçu</span>
+                      <Printer size={16} className="group-hover/btn:scale-110 transition-transform"/>
                     </button>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
+                  <td colSpan={7} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-4 opacity-20">
                       <Coins size={64} />
                       <p className="text-sm font-black uppercase tracking-widest">Aucune transaction trouvée</p>

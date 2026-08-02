@@ -4,10 +4,11 @@ Ce guide vous accompagne à travers une démonstration de bout en bout illustran
 
 ## 🎭 Scénario : "De la détection de fraude à l'intervention terrain"
 
-### Étape 1 : Analyse des Pertes (MDMS)
-1. Allez dans la section **"Analytique"**.
-2. Observez le tableau **"Bilan Énergétique"**.
-3. **Observation** : La région de **Niamey** affiche un taux de perte de **32.8%** (en rouge). C'est une anomalie critique indiquant une possible fraude massive ou un poste défaillant.
+### Étape 1 : Analyse des Pertes (Revenue Assurance v5.0)
+1. Allez dans la section **"Revenue Assurance"**.
+2. Observez le tableau **"Bilan Énergétique Automatisé"**.
+3. **Observation** : Le système compare en temps réel l'énergie injectée dans les transformateurs (HTA/BT) et l'énergie facturée. La zone de **Niamey - Yantala** affiche un taux de perte commerciale critique (>20%).
+4. Consultez la liste des **"Top Suspects IA"** : le moteur de Machine Learning a déjà isolé les 5 compteurs présentant les signatures de charge les plus suspectes.
 
 ### Étape 2 : Simulation d'une Fraude Critique
 1. Toujours dans "Analytique", cliquez sur le bouton **"🔥 Simulation Fraude Critique"**.
@@ -23,12 +24,12 @@ Ce guide vous accompagne à travers une démonstration de bout en bout illustran
 4. Cliquez sur **"Commencer"**. Le statut passe à "En cours".
 5. Une fois terminé, cliquez sur **"Clôturer"**. Le compteur est sécurisé.
 
-### Étape 4 : Maintenance Logistique (Magasin)
-1. Supposons que le compteur fraudé doive être remplacé. Allez dans **"Gestion du Magasin"**.
-2. Recherchez un compteur avec le statut **"Disponible"** (ex: `542-001-002`).
-3. Cliquez sur l'icône **"Camion" (Installer)**.
+### Étape 4 : Maintenance Logistique (Magasin & Actifs)
+1. Supposons que le compteur fraudé doive être remplacé. Allez dans **"Magasin & Actifs"**.
+2. Recherchez un compteur avec le statut **"En Stock"** (ex: `542-001-002`).
+3. Cliquez sur le bouton **"Action"** du compteur et sélectionnez **"Installer"**.
 4. Le système vous demande d'assigner ce nouveau compteur au client `C001` pour remplacer l'ancien.
-5. **Résultat** : Le nouveau compteur passe en statut "Posé" et l'ancien est envoyé en "Récupération/SAV".
+5. **Résultat** : Le nouveau compteur passe en statut "Installé" et l'ancien est envoyé en "SAV/Rebut" pour expertise.
 
 ### Étape 5 : Ventes STS & Recharge
 1. Le client souhaite maintenant recharger son nouveau compteur.

@@ -63,8 +63,8 @@ Ce document présente une analyse détaillée des écarts (Gap Analysis) entre l
 
 | Sous-catégorie | e-EnergieTEC Actuel | Standard Hexing / Itron / Landis+Gyr | Statut (Gap) |
 | :--- | :--- | :--- | :--- |
-| **IEC 62055 (STS)** | Logique implémentée | Certification officielle par la STS Association requise | 🔴 Processus Administratif |
-| **IEC 62056 (DLMS)**| Structure préparée | Suite de tests CTT (Conformance Test Tool) passée | 🔴 Processus Administratif |
+| **IEC 62055 (STS)** | Logique durcie (TID, HSM Ready) | Certification officielle par la STS Association requise | 🟢 Prêt pour Certification |
+| **IEC 62056 (DLMS)**| Structure N-Tiers robuste | Suite de tests CTT (Conformance Test Tool) passée | 🟢 Prêt pour Certification |
 
 ---
 

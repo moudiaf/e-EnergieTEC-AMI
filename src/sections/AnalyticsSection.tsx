@@ -104,9 +104,9 @@ export const AnalyticsSection = ({
   // ─── 4. CANAUX DE PAIEMENT ───────────────────────────────────────
   const channelData = useMemo(() => [
     { name: 'Orange',  value: payments.filter(p => p.operator === 'Orange').reduce((s, p) => s + p.amount, 0),  color: '#ff6b35' },
-    { name: 'Airtel',  value: payments.filter(p => p.operator === 'Airtel').reduce((s, p) => s + p.amount, 0),  color: '#ef4444' },
-    { name: 'Digital', value: payments.filter(p => ['NITA','AMANA'].includes(p.operator)).reduce((s, p) => s + p.amount, 0), color: '#3b82f6' },
-    { name: 'Espèces', value: payments.filter(p => ['CASH','AGENCY'].includes(p.operator)).reduce((s, p) => s + p.amount, 0), color: '#f59e0b' },
+    { name: 'Airtel',  value: payments.filter(p => p.operator === 'Airtel').reduce((s, p) => s + p.amount, 0),  color: '#00A651' },
+    { name: 'Portail', value: payments.filter(p => ['NITA','AMANA'].includes(p.operator)).reduce((s, p) => s + p.amount, 0), color: '#1a1a1a' },
+    { name: 'Agence',  value: payments.filter(p => ['CASH','AGENCY'].includes(p.operator)).reduce((s, p) => s + p.amount, 0), color: '#262626' },
   ].filter(c => c.value > 0), [payments]);
 
   // ─── 5. CALCUL DYNAMIQUE DU SCORE ML FRAUDE ─────────────────────
@@ -177,37 +177,49 @@ export const AnalyticsSection = ({
     <motion.div key="analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-12">
 
       {/* ── En-tête ──────────────────────────────────────────────── */}
-      <div className="flex justify-between items-start flex-wrap gap-4">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/5 pb-8">
         <div>
-          <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Analytique &amp; Performance</h3>
-          <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest mt-1">
-            Analyse prédictive · Consommation · Bilan energétique · Détection fraude
-          </p>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="px-2 py-0.5 bg-brand/20 text-brand text-[8px] font-black uppercase rounded border border-brand/30">Nigelec Analytics Hub v4.0</span>
+            <span className="flex items-center gap-1 text-[8px] font-bold text-green-500 uppercase tracking-widest">
+              <Activity size={10} /> Temps Réel
+            </span>
+          </div>
+          <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Analytique & <span className="text-brand">Performance</span></h3>
+          <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.3em] mt-1">Plateforme Prédictive de Surveillance du Réseau</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <button
             onClick={onSimulateAnomaly}
-            className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2"
+            className="px-6 py-3 bg-red-600/10 border border-red-600/30 rounded-2xl text-[10px] font-black text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-xl flex items-center gap-2 group"
           >
-            <AlertTriangle size={14} /> Simuler Fraude
+            <AlertTriangle size={16} className="group-hover:animate-pulse" /> SIMULATEUR FRAUDE
           </button>
         </div>
       </div>
 
       {/* ── KPI Cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Énergie Livrée', value: totalKwh.toFixed(1), unit: 'kWh',       icon: Zap,      color: 'text-brand',       bg: 'from-brand/10' },
-          { label: 'Chiffre d\'Affaires',  value: totalRevenue.toLocaleString(), unit: 'FCFA', icon: Coins,    color: 'text-niger-green', bg: 'from-niger-green/10' },
-          { label: 'Transactions STS',     value: totalTokens.toString(), unit: 'tokens', icon: Activity, color: 'text-blue-400',     bg: 'from-blue-500/10' },
-          { label: 'Moy. Énergie / Tx',   value: avgKwhPerTx, unit: 'kWh/tx',             icon: TrendingUp, color: 'text-purple-400', bg: 'from-purple-500/10' },
+          { label: 'Énergie Livrée (kWh)', value: totalKwh.toFixed(1), unit: 'kWh', icon: Zap, color: 'text-white', bg: 'from-brand/10', trend: '+12.5%', trendColor: 'text-green-400' },
+          { label: 'Chiffre d\'Affaires', value: totalRevenue.toLocaleString(), unit: 'FCFA', icon: Coins, color: 'text-green-400', bg: 'from-green-500/10', trend: '+5.2%', trendColor: 'text-green-400' },
+          { label: 'Transactions STS', value: totalTokens.toString(), unit: 'tokens', icon: Activity, color: 'text-blue-400', bg: 'from-blue-500/10', trend: '+8.1%', trendColor: 'text-green-400' },
+          { label: 'Taux Pertes National', value: avgLoss, unit: '%', icon: TrendingDown, color: 'text-orange-400', bg: 'from-orange-500/10', trend: '-0.5%', trendColor: 'text-green-400' },
         ].map((k, i) => (
-          <div key={i} className={`glass-panel p-6 rounded-2xl border border-white/5 bg-gradient-to-br ${k.bg} to-transparent`}>
-            <div className="flex items-start justify-between mb-3">
-              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-tight">{k.label}</p>
-              <k.icon size={16} className={k.color} />
+          <div key={i} className={cn("glass-panel p-6 rounded-3xl border border-white/5 bg-gradient-to-br to-transparent relative overflow-hidden group", k.bg)}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-white/5 rounded-2xl text-gray-400 group-hover:text-white transition-colors">
+                <k.icon size={20} />
+              </div>
+              <div className={cn("flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg bg-white/5", k.trendColor)}>
+                <TrendingUp size={10} /> {k.trend}
+              </div>
             </div>
-            <p className={`text-2xl font-black ${k.color}`}>{k.value}<span className="text-sm font-bold text-gray-500 ml-1">{k.unit}</span></p>
+            <div>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{k.label}</p>
+              <p className={cn("text-3xl font-black", k.color)}>{k.value}<span className="text-sm font-bold opacity-40 ml-1">{k.unit}</span></p>
+            </div>
+            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all"></div>
           </div>
         ))}
       </div>
@@ -236,8 +248,8 @@ export const AnalyticsSection = ({
             <p className="text-xs mt-1">Effectuez une recharge pour voir la courbe</p>
           </div>
         ) : (
-          <div className="h-[300px] w-full min-h-[300px]" style={{ height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+          <div className="h-[300px] w-full relative overflow-hidden" style={{ minHeight: '300px', minWidth: '0' }}>
+            <ResponsiveContainer width="100%" height={300} debounce={50}>
               <AreaChart data={consumptionTrend.filter((_, i) => i % 3 === 0 || i === consumptionTrend.length - 1)}>
                 <defs>
                   <linearGradient id="gKwh" x1="0" y1="0" x2="0" y2="1">
@@ -273,8 +285,8 @@ export const AnalyticsSection = ({
             <div className="h-[220px] flex items-center justify-center text-gray-500 text-sm">Aucune donnée</div>
           ) : (
             <>
-              <div className="h-[180px] w-full min-h-[180px]" style={{ height: '180px' }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+              <div className="h-[180px] w-full relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
+                <ResponsiveContainer width="100%" height={180} debounce={50}>
                   <BarChart data={segmentDistrib} barSize={36}>
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6b7280' }} />
@@ -306,8 +318,8 @@ export const AnalyticsSection = ({
             <div className="h-[220px] flex items-center justify-center text-gray-500 text-sm">Aucun paiement enregistré</div>
           ) : (
             <>
-              <div className="h-[180px] w-full min-h-[180px]" style={{ height: '180px' }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+              <div className="h-[180px] w-full relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
+                <ResponsiveContainer width="100%" height={180} debounce={50}>
                   <RePieChart>
                     <Pie data={channelData} innerRadius={55} outerRadius={75} paddingAngle={5} dataKey="value" strokeWidth={0}>
                       {channelData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
@@ -350,32 +362,38 @@ export const AnalyticsSection = ({
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-separate border-spacing-y-3">
               <thead>
-                <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
-                  <th className="pb-4">Zone / Région</th>
-                  <th className="pb-4 text-right">Injecté (kWh)</th>
-                  <th className="pb-4 text-right">Facturé (kWh)</th>
-                  <th className="pb-4 text-right">Pertes (%)</th>
-                  <th className="pb-4 text-right">Statut</th>
+                <tr className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                  <th className="px-4 py-4">Zone / Région Nigelec</th>
+                  <th className="px-4 py-4 text-right">Injecté (kWh)</th>
+                  <th className="px-4 py-4 text-right">Facturé (kWh)</th>
+                  <th className="px-4 py-4 text-right">Pertes (%)</th>
+                  <th className="px-4 py-4 text-right">État</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="">
                 {energyBalanceData.map((b, i) => (
-                  <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-4 text-sm font-bold text-white">{b.areaName}</td>
-                    <td className="py-4 text-right text-sm text-gray-400 font-mono">{b.injectedKwh.toLocaleString()}</td>
-                    <td className="py-4 text-right text-sm text-brand font-mono">{b.meteredKwh.toLocaleString()}</td>
-                    <td className="py-4 text-right">
+                  <tr key={i} className="group transition-all">
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
+                      <p className="text-sm font-black text-white uppercase tracking-tight">{b.areaName}</p>
+                    </td>
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors text-right">
+                      <span className="text-sm font-mono text-gray-400">{b.injectedKwh.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors text-right">
+                      <span className="text-sm font-mono text-brand font-black">{b.meteredKwh.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors text-right">
                       <span className={cn("text-sm font-black",
                         b.lossPercentage > 20 ? "text-red-500" :
                         b.lossPercentage > 12 ? "text-orange-400" : "text-green-400"
                       )}>{b.lossPercentage}%</span>
                     </td>
-                    <td className="py-4 text-right">
-                      <div className={cn("inline-block w-2 h-2 rounded-full",
-                        b.lossPercentage > 20 ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
-                        b.lossPercentage > 12 ? "bg-orange-500" : "bg-green-500"
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
+                      <div className={cn("inline-block w-2.5 h-2.5 rounded-full border-2 border-black/50",
+                        b.lossPercentage > 20 ? "bg-red-500 shadow-[0_0_12px_#ef444466]" :
+                        b.lossPercentage > 12 ? "bg-orange-500 shadow-[0_0_12px_#f9731666]" : "bg-green-500 shadow-[0_0_12px_#22c55e66]"
                       )} />
                     </td>
                   </tr>
@@ -383,8 +401,8 @@ export const AnalyticsSection = ({
               </tbody>
             </table>
           </div>
-          <div className="h-[260px] bg-white/[0.02] rounded-2xl p-4 border border-white/5 min-h-[260px]" style={{ height: '260px' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={1}>
+          <div className="h-[260px] bg-white/[0.02] rounded-2xl p-4 border border-white/5 relative overflow-hidden" style={{ minHeight: '260px', minWidth: '0' }}>
+            <ResponsiveContainer width="100%" height={260} debounce={50}>
               <BarChart data={energyBalanceData} barGap={4}>
                 <XAxis dataKey="areaName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6b7280' }} />

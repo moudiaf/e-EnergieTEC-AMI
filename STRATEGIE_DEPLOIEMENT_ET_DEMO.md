@@ -40,15 +40,16 @@ La présentation doit être structurée pour "impressionner" (Aesthetics) tout e
 
 ### Démonstration Live (15 min) : "Le parcours du jeton"
 Suivez ce scénario pour montrer la puissance du système :
-1. **Achat côté Client** : Simulez un achat sur l'App Mobile via Orange Money. Montrez la génération instantanée du Jeton STS.
-2. **Supervision Géo-Intelligente** : Basculez sur la carte GIS. Changez de région (ex: Niamey -> Agadez) pour montrer la scalabilité nationale.
-3. **Intelligence Artificielle** : Ouvrez le tableau MDMS. Montrez les alertes générées par le modèle **Isolation Forest** (ML) pour prouver notre supériorité en détection de fraude.
-4. **Impression Thermique** : Imprimez un reçu en direct pour montrer que le système est prêt pour les agences physiques.
+1. **Achat côté Client** : Simulez un achat sur l'App Mobile via Orange Money. Montrez la génération instantanée du Jeton STS (avec protection TID).
+2. **Revenue Assurance v5.0** : Ouvrez le tableau de bord "Garantie des Revenus". Montrez comment le système compare l'énergie des transformateurs et celle des clients pour débusquer les pertes.
+3. **Intelligence Artificielle** : Montrez la liste des **"Top Suspects IA"**. Expliquez que le modèle ML identifie les fraudeurs par signature de charge, optimisant ainsi les descentes terrain.
+4. **Supervision Géo-Intelligente** : Basculez sur la carte GIS. Changez de zone pour montrer la scalabilité nationale.
+5. **Impression Thermique** : Imprimez un reçu en direct pour montrer que le système est prêt pour les agences physiques.
 
 ### Session Technique (10 min) : Pourquoi nous sommes Tier-1 ?
 - Présentez le document **`GAP_ANALYSIS_NIGELEC.md`**.
-- Expliquez que l'architecture est basée sur **Apache Kafka** (utilisé par LinkedIn/Netflix) et **TimescaleDB**, garantissant une capacité de plus d'un million de compteurs.
-- Parlez de l'isolation du **KMS/HSM** pour la sécurité bancaire.
+- Expliquez l'**Architecture N-Tiers Modulaire** : une structure découplée qui garantit une maintenance simplifiée et une haute disponibilité des services critiques (STS, Billing).
+- Parlez de l'isolation du **KMS/HSM** et de l'**Audit Trail Immuable** qui garantit la traçabilité de chaque franc encaissé.
 
 ### Conclusion : La Roadmap vers le Milliard de Trame
 - Présentez la roadmap de 12 mois pour la certification officielle.

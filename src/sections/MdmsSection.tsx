@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useAmi } from '../context/AmiContext';
 import { 
   FileText, RefreshCw, Database, CheckCircle2, TrendingUp, Eye, 
   MapPin, Cpu, Zap, Activity, ShieldCheck, Server, Network,
-  AlertCircle, BarChart2, Clock, Terminal, PieChart, Search as SearchIcon
+  AlertCircle, BarChart2, Clock, Terminal, PieChart, Search as SearchIcon, X, Loader2
 } from 'lucide-react';
 import { 
   ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, 
@@ -51,6 +52,51 @@ export const MdmsSection = ({
   mdmsSearch,
   setMdmsSearch
 }: MdmsSectionProps) => {
+  const { authFetch } = useAmi();
+  const [selectedTransformer, setSelectedTransformer] = useState<string | null>(null);
+  const [showDlmsInspector, setShowDlmsInspector] = useState(false);
+  const [inspectingMeter, setInspectingMeter] = useState<string | null>(null);
+  const [decodedData, setDecodedData] = useState<any>(null);
+  const [loadingDlms, setLoadingDlms] = useState(false);
+  const [hesError, setHesError] = useState<string | null>(null);
+
+  const fetchDlmsData = async (meterId: string) => {
+    setInspectingMeter(meterId);
+    setShowDlmsInspector(true);
+    setDecodedData(null);
+    setHesError(null);
+    setLoadingDlms(true);
+    
+    // Identifier le type de compteur
+    const meter = meters.find(m => m.id === meterId);
+    const isTriphase = meter?.phaseType === 'triphase' || meter?.type === 'industrial' || meter?.type === 'commercial' && meter?.voltage > 300;
+
+    try {
+      // Simulation d'une trame HDLC/DLMS brute (plus longue pour le triphasé)
+      const dummyFrame = isTriphase 
+        ? "7EA019032111100000E6E700DB080000000000000000BE4F7E8899AA"
+        : "7EA019032111100000E6E700DB080000000000000000BE4F7E";
+      
+      const response = await authFetch('/api/hes/decode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ frame: dummyFrame })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      // Injecter la trame brute pour affichage
+      setDecodedData({ ...data, frame: dummyFrame });
+    } catch (e: any) {
+      console.error("Erreur de décodage DLMS", e);
+      setHesError(e.message || "Passerelle HES Gateway injoignable");
+    } finally {
+      setLoadingDlms(false);
+    }
+  };
 
   // ─── Calculs Ingestion ──────────────────────────────────────────
   const healthScore = useMemo(() => {
@@ -206,9 +252,9 @@ export const MdmsSection = ({
               <h4 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                 <BarChart2 size={14} className="text-brand" /> Flux d'ingestion (Horaire)
               </h4>
-              <div className="h-[200px] w-full min-h-[200px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <AreaChart data={hourlyIngestion}>
+                <div className="h-[200px] w-full relative overflow-hidden" style={{ minHeight: '200px', minWidth: '0' }}>
+                  <ResponsiveContainer width="100%" height={200} debounce={50}>
+                    <AreaChart data={hourlyIngestion}>
                     <defs>
                       <linearGradient id="colorIngest" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.3}/>
@@ -231,8 +277,8 @@ export const MdmsSection = ({
                 <PieChart size={14} className="text-blue-400" /> Distribution VEE
               </h4>
               <div className="flex items-center gap-4">
-                <div className="h-[180px] w-1/2 min-h-[180px]">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <div className="h-[180px] w-1/2 relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
+                  <ResponsiveContainer width="100%" height={180} debounce={50}>
                     <RePieChart>
                       <Pie
                         data={mdmsStats?.validationStats?.map((s: any) => ({ name: s.status, value: s.count })) || []}
@@ -249,22 +295,14 @@ export const MdmsSection = ({
                     </RePieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-1/2 space-y-3">
+                <div className="w-1/2 space-y-2">
                   {mdmsStats?.validationStats?.map((s: any) => (
-                    <div key={s.status} className="flex flex-col">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: (STAT_COLORS as any)[s.status] || '#555' }}></div>
-                          <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{s.status}</span>
-                        </div>
-                        <span className="text-[10px] font-black text-white">{s.count}</span>
+                    <div key={s.status} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: (STAT_COLORS as any)[s.status] }} />
+                        <span className="text-[10px] font-bold text-gray-500 uppercase">{s.status}</span>
                       </div>
-                      <div className="w-full h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ 
-                          width: `${(s.count / (mdmsStats.totalReadings || 1)) * 100}%`,
-                          backgroundColor: (STAT_COLORS as any)[s.status] || '#555' 
-                        }}></div>
-                      </div>
+                      <span className="text-[10px] font-black text-white">{s.count}</span>
                     </div>
                   ))}
                 </div>
@@ -282,8 +320,8 @@ export const MdmsSection = ({
                 <span className="text-[8px] font-black px-2 py-0.5 rounded bg-brand/10 text-brand border border-brand/20 uppercase">Granularité 15min</span>
               </div>
             </div>
-            <div className="h-[250px] w-full min-h-[250px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <div className="h-[250px] w-full relative overflow-hidden" style={{ minHeight: '250px', minWidth: '0' }}>
+              <ResponsiveContainer width="100%" height={250} debounce={50}>
                 <BarChart data={[
                   { time: '00:00', val: 1.2, est: 0 }, { time: '04:00', val: 0.8, est: 0 }, { time: '08:00', val: 0, est: 3.5 },
                   { time: '12:00', val: 4.8, est: 0 }, { time: '16:00', val: 4.2, est: 0 }, { time: '20:00', val: 5.6, est: 0 },
@@ -305,6 +343,67 @@ export const MdmsSection = ({
                <div className="flex items-center gap-2 text-[9px] font-bold text-gray-500 uppercase">
                  <div className="w-2 h-2 rounded bg-blue-500/60"></div> Estimations VEE
                </div>
+            </div>
+          </div>
+
+          {/* ── Bilan Énergétique (Energy Balance) ──────────────────── */}
+          <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden bg-bg-dark/40">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h4 className="font-black text-lg text-white uppercase tracking-tight flex items-center gap-3">
+                  <Zap size={20} className="text-yellow-400" /> Bilan Énergétique (Energy Balance)
+                </h4>
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Comparaison Injection Transformateur vs Consommation Clients</p>
+              </div>
+              <div className="px-4 py-2 bg-yellow-400/10 rounded-xl border border-yellow-400/20 text-center">
+                <span className="block text-[8px] font-black text-yellow-400 uppercase">Pertes Moyennes</span>
+                <span className="block text-lg font-black text-white">
+                  {mdmsStats?.energyBalance?.length > 0 ? (mdmsStats.energyBalance.reduce((acc: number, b: any) => acc + b.lossPercentage, 0) / mdmsStats.energyBalance.length).toFixed(1) : '0.0'}%
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {mdmsStats?.energyBalance?.map((b: any) => (
+                <div key={b.transformerId} className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[9px] font-black text-gray-500 uppercase">Transformateur</p>
+                      <p className="font-mono text-xs font-black text-brand">{b.transformerId}</p>
+                    </div>
+                    <div className={cn(
+                      "px-2 py-0.5 rounded-full text-[8px] font-black uppercase",
+                      b.lossPercentage > 12 ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                    )}>
+                      {b.lossPercentage > 12 ? '⚠️ Perte Élevée' : '✓ Normal'}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-gray-500 font-bold uppercase">Injection</span>
+                      <span className="text-white font-black">{b.inputEnergy.toLocaleString()} kWh</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-gray-500 font-bold uppercase">Livraison</span>
+                      <span className="text-white font-black">{b.deliveredEnergy.toLocaleString()} kWh</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mt-1">
+                      <div 
+                        className={cn("h-full", b.lossPercentage > 12 ? "bg-red-500" : "bg-brand")}
+                        style={{ width: `${Math.min(100, (b.deliveredEnergy / b.inputEnergy) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/5 flex justify-between items-center">
+                    <span className="text-[9px] font-bold text-gray-600 uppercase">Pertes (NPT)</span>
+                    <span className={cn("text-xs font-black", b.lossPercentage > 12 ? "text-red-400" : "text-white")}>
+                      {b.lossPercentage}%
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -341,12 +440,13 @@ export const MdmsSection = ({
           <table className="w-full text-left">
             <thead>
               <tr className="bg-white/[0.02] text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-white/5">
-                <th className="px-8 py-5">Compteur / Location</th>
-                <th className="px-8 py-5">Date/Heure</th>
-                <th className="px-8 py-5">Voltage (V)</th>
-                <th className="px-8 py-5">Charge (kWh)</th>
-                <th className="px-8 py-5 text-center">Status VEE</th>
-                <th className="px-8 py-5 text-right">Actions</th>
+                <th className="px-6 py-5">Compteur / Location</th>
+                <th className="px-4 py-5">Phase</th>
+                <th className="px-4 py-5">Date/Heure</th>
+                <th className="px-4 py-5">Voltage</th>
+                <th className="px-4 py-5">Charge (kWh)</th>
+                <th className="px-4 py-5 text-center">Status VEE</th>
+                <th className="px-4 py-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -354,18 +454,26 @@ export const MdmsSection = ({
                 .filter(interval => {
                   const m = meters.find(met => met.id === interval.meterId);
                   const query = mdmsSearch.toLowerCase();
-                  return interval.meterId.toLowerCase().includes(query) || 
-                         (m?.location?.toLowerCase().includes(query));
+                  return (interval.meterId || '').toLowerCase().includes(query) || 
+                         (m?.location || '').toLowerCase().includes(query);
                 })
                 .slice(0, 10).map(interval => {
                   const meter = meters.find(m => m.id === interval.meterId);
+                  const isTriphase = meter?.phaseType === 'triphase';
                   return (
                   <tr key={interval.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-8 py-6">
+                    <td className="px-6 py-5">
                       <p className="font-mono text-xs font-black text-brand">{interval.meterId}</p>
                       <p className="text-[9px] text-gray-500 font-bold uppercase mt-1">{meter?.location || 'Inconnue'}</p>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-5">
+                      <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-black uppercase",
+                        isTriphase ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                      )}>
+                        {isTriphase ? '3φ' : '1φ'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-5">
                       <div className="flex items-center gap-2">
                         <Clock size={12} className="text-gray-600" />
                         <span className="text-[11px] font-bold text-gray-400">
@@ -373,17 +481,45 @@ export const MdmsSection = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <span className={cn("text-xs font-black", interval.voltage < 210 ? "text-red-400" : "text-white")}>
-                        {interval.voltage} <span className="text-[9px] opacity-40">V</span>
-                      </span>
+                    <td className="px-4 py-5">
+                      {isTriphase && interval.voltageL1 ? (
+                        <div className="space-y-1">
+                          <span className={cn("text-xs font-black", interval.voltage < 370 ? "text-red-400" : "text-white")}>
+                            {interval.voltage?.toFixed(1)} <span className="text-[8px] opacity-40">V (L-L)</span>
+                          </span>
+                          <div className="flex gap-1.5">
+                            {[
+                              { label: 'L1', value: interval.voltageL1 },
+                              { label: 'L2', value: interval.voltageL2 },
+                              { label: 'L3', value: interval.voltageL3 },
+                            ].map((ph) => (
+                              <span key={ph.label} className={cn("text-[8px] font-bold px-1 py-0.5 rounded",
+                                (ph.value < 207 || ph.value > 253) ? "bg-red-500/10 text-red-400" : "bg-white/5 text-gray-400"
+                              )}>
+                                {ph.label}:{ph.value?.toFixed(1)}V
+                              </span>
+                            ))}
+                          </div>
+                          {interval.voltageUnbalance != null && (
+                            <span className={cn("text-[7px] font-bold",
+                              interval.voltageUnbalance > 2 ? "text-red-400" : "text-gray-600"
+                            )}>
+                              Déséq: {interval.voltageUnbalance}%
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className={cn("text-xs font-black", interval.voltage < 210 ? "text-red-400" : "text-white")}>
+                          {interval.voltage?.toFixed(1)} <span className="text-[9px] opacity-40">V</span>
+                        </span>
+                      )}
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-5">
                       <span className="text-xs font-black text-green-400">
                         {interval.consumption.toFixed(3)} <span className="text-[9px] opacity-40 uppercase">kWh</span>
                       </span>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-5">
                       <div className="flex justify-center">
                         <span className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5",
                           interval.status === 'valid' ? "bg-green-500/10 text-green-500" :
@@ -394,7 +530,13 @@ export const MdmsSection = ({
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-4 py-5 text-right flex gap-2 justify-end">
+                      <button 
+                        onClick={() => fetchDlmsData(interval.meterId)}
+                        className="p-3 bg-white/5 hover:bg-blue-500 hover:text-white text-gray-500 rounded-xl transition-all border border-white/5 hover:border-blue-500 shadow-lg"
+                      >
+                        <Activity size={16} />
+                      </button>
                       <button 
                         onClick={() => {
                           if (meter) {
@@ -402,7 +544,7 @@ export const MdmsSection = ({
                             setCurrentSection('map');
                           }
                         }}
-                        className="p-3 bg-white/5 hover:bg-brand hover:text-white text-gray-500 rounded-xl transition-all border border-white/5 hover:border-brand shadow-lg hover:shadow-brand/20 group/map"
+                        className="p-3 bg-white/5 hover:bg-brand hover:text-white text-gray-500 rounded-xl transition-all border border-white/5 hover:border-brand shadow-lg"
                       >
                         <MapPin size={16} />
                       </button>
@@ -411,7 +553,7 @@ export const MdmsSection = ({
                 )})}
               {selectedMeterIntervals.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center text-gray-600 font-black uppercase text-xs opacity-30">
+                  <td colSpan={7} className="px-8 py-20 text-center text-gray-600 font-black uppercase text-xs opacity-30">
                     Aucune lecture MDMS disponible dans le cache VEE
                   </td>
                 </tr>
@@ -420,6 +562,79 @@ export const MdmsSection = ({
           </table>
         </div>
       </div>
+
+      {/* DLMS INSPECTOR MODAL */}
+      {showDlmsInspector && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel w-full max-w-2xl bg-[#0a0a0b] rounded-[32px] border border-white/10 overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-blue-500/10 to-transparent">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Activity size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white uppercase tracking-tighter">Inspecteur DLMS/COSEM</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Diagnostic OBIS Temps Réel · {inspectingMeter}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowDlmsInspector(false)} className="p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-500 hover:text-white"><X size={20}/></button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {loadingDlms ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                  <Loader2 className="animate-spin text-blue-500" size={40} />
+                  <p className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Décryptage de la trame APDU par HES...</p>
+                </div>
+              ) : hesError ? (
+                <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+                  <AlertCircle className="text-red-500" size={40} />
+                  <p className="text-xs font-black text-red-400 uppercase tracking-widest">{hesError}</p>
+                  <p className="text-[10px] text-gray-500 max-w-sm">La passerelle HES Gateway est injoignable ou a renvoyé une erreur de décapsulation.</p>
+                </div>
+              ) : !decodedData ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                  <Loader2 className="animate-spin text-blue-500" size={40} />
+                  <p className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">En attente de décodage...</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-white/5 rounded-2xl border border-white/5 font-mono text-[10px] text-blue-300 break-all leading-relaxed">
+                    <span className="text-gray-500 mr-2 uppercase">Trame Brute:</span>
+                    {decodedData.frame}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    {decodedData.objects.map((obj: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-2xl transition-all group">
+                        <div className="flex items-center gap-4">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                          <div>
+                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-0.5">{obj.obis}</p>
+                            <p className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">{obj.name}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-black text-white">{obj.value}</span>
+                          <span className="text-[10px] font-bold text-gray-500 ml-1 uppercase">{obj.unit}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-white/5 bg-white/[0.01] flex justify-between items-center">
+              <div className="flex gap-4">
+                <div className="text-[10px]"><span className="text-gray-500 uppercase font-black mr-2">Protocole:</span><span className="text-green-500 font-bold">DLMS-V2</span></div>
+                <div className="text-[10px]"><span className="text-gray-500 uppercase font-black mr-2">Chiffrement:</span><span className="text-blue-500 font-bold">AES-GCM-128</span></div>
+              </div>
+              <button onClick={() => fetchDlmsData(inspectingMeter!)} className="px-6 py-2 bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-400 transition-all shadow-lg shadow-blue-500/20">Rafraîchir</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 };

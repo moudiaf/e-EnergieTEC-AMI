@@ -216,8 +216,8 @@ export const TARIFFS: Record<string, Tariff> = {
 };
 
 export const INITIAL_ALERTS: Alert[] = [
-  { id: '1', type: 'warning', title: 'Crédit faible détecté', message: 'Le compteur 541-234-568 dispose de moins de 1 500 FCFA de crédit', timestamp: new Date(Date.now() - 600000), status: 'unread' },
-  { id: '2', type: 'danger', title: 'Crédit critique', message: 'Le compteur 541-234-571 dispose de seulement 320 FCFA - Recharge urgente', timestamp: new Date(Date.now() - 900000), status: 'unread' },
-  { id: '3', type: 'success', title: 'Token généré avec succès', message: 'Recharge de 5 000 FCFA effectuée pour le compteur 541-234-567', timestamp: new Date(Date.now() - 7200000), status: 'read' },
-  { id: '4', type: 'info', title: 'Mise à jour tarifaire', message: 'Les tarifs NIGELEC ont été synchronisés avec succès', timestamp: new Date(Date.now() - 18000000), status: 'read' }
+  { id: '1', type: 'warning', category: 'credit', priority: 'Moyenne', title: 'Crédit faible détecté', message: 'Le compteur 541-234-568 dispose de moins de 1 500 FCFA de crédit', timestamp: new Date(Date.now() - 600000), status: 'unread' },
+  { id: '2', type: 'danger', category: 'credit', priority: 'Haute', title: 'Crédit critique', message: 'Le compteur 541-234-571 dispose de seulement 320 FCFA - Recharge urgente', timestamp: new Date(Date.now() - 900000), status: 'unread' },
+  { id: '3', type: 'success', category: 'vending', priority: 'Basse', title: 'Token généré avec succès', message: 'Recharge de 5 000 FCFA effectuée pour le compteur 541-234-567', timestamp: new Date(Date.now() - 7200000), status: 'read' },
+  { id: '4', type: 'info', category: 'system', priority: 'Basse', title: 'Mise à jour tarifaire', message: 'Les tarifs NIGELEC ont été synchronisés avec succès', timestamp: new Date(Date.now() - 18000000), status: 'read' }
 ];

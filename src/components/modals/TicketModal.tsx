@@ -21,10 +21,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={editingTicket ? 'Modifier Ticket' : 'Nouveau Ticket Support'}>
     <form onSubmit={handleSaveTicket} className="space-y-6">
-      <div>
-        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Sujet de l'incident</label>
-        <input type="text" name="subject" defaultValue={editingTicket?.subject} className="input-field w-full h-12" placeholder="Ex: Panne de secteur ou Problème recharge" required />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Sujet de l'incident</label>
+          <input type="text" name="subject" defaultValue={editingTicket?.subject} className="input-field w-full h-12" placeholder="Ex: Panne de secteur" required />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">ID Compteur (Optionnel)</label>
+          <input type="text" name="meterId" defaultValue={editingTicket?.meterId} className="input-field w-full h-12" placeholder="541-XXX-XXX" />
+          <input type="hidden" name="customerId" defaultValue={editingTicket?.customerId || currentUser?.associatedCustomerId || 'admin'} />
+        </div>
       </div>
+
       
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -65,7 +73,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             </select>
             <select name="assignedTo" defaultValue={editingTicket?.assignedTo} className="input-field w-full h-12 bg-bg-dark">
                <option value="">Non assigné</option>
-               {users.filter(u => u.role === 'tech' || u.role === 'admin').map(u => (
+               {(Array.isArray(users) ? users : []).filter(u => u.role === 'tech' || u.role === 'admin').map(u => (
                  <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
                ))}
             </select>

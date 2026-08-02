@@ -6,7 +6,7 @@ import {
     TrendingUp, Coins, Percent, Clock, AlertTriangle,
     Activity
 } from 'lucide-react';
-import { Tariff, TariffTier } from '../types';
+import { Tariff, TariffTier, User } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -20,6 +20,7 @@ interface TariffsSectionProps {
     setEditingTiers: (tiers: TariffTier[]) => void;
     setIsTariffModalOpen: (open: boolean) => void;
     handleDeleteTariff: (id: string) => void;
+    currentUser?: User | null;
 }
 
 export const TariffsSection = ({
@@ -27,10 +28,12 @@ export const TariffsSection = ({
     setEditingTariff,
     setEditingTiers,
     setIsTariffModalOpen,
-    handleDeleteTariff
+    handleDeleteTariff,
+    currentUser
 }: TariffsSectionProps) => {
     const [simulatingTariff, setSimulatingTariff] = useState<string | null>(null);
     const [simKwh, setSimKwh] = useState<number>(100);
+    const isAuditor = currentUser?.role === 'auditor';
 
     return (
         <motion.div 
@@ -52,14 +55,20 @@ export const TariffsSection = ({
                 </div>
                 
                 <div className="flex gap-4">
-                    <button 
-                        onClick={() => { setEditingTariff(null); setEditingTiers([]); setIsTariffModalOpen(true); }}
-                        className="group relative px-6 py-3 bg-brand shadow-[0_10px_30px_rgba(255,107,53,0.3)] hover:bg-brand-light rounded-2xl transition-all flex items-center gap-3 overflow-hidden text-white"
-                    >
-                        <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                        <Plus size={18} className="relative z-10" />
-                        <span className="text-[10px] font-black uppercase tracking-widest relative z-10">Créer un Segment</span>
-                    </button>
+                    {isAuditor ? (
+                        <div className="px-6 py-3.5 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-yellow-400 font-black text-xs uppercase tracking-widest flex items-center gap-3">
+                            <ShieldCheck size={16} /> Consultation Officielle ARSE (Lecture Seule)
+                        </div>
+                    ) : (
+                        <button 
+                            onClick={() => { setEditingTariff(null); setEditingTiers([]); setIsTariffModalOpen(true); }}
+                            className="group relative px-6 py-3 bg-brand shadow-[0_10px_30px_rgba(255,107,53,0.3)] hover:bg-brand-light rounded-2xl transition-all flex items-center gap-3 overflow-hidden text-white"
+                        >
+                            <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                            <Plus size={18} className="relative z-10" />
+                            <span className="text-[10px] font-black uppercase tracking-widest relative z-10">Créer un Segment</span>
+                        </button>
+                    )}
                     <button className="px-6 py-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 flex items-center gap-3 transition-all text-[10px] font-black uppercase tracking-widest">
                         <Calculator size={18} className="text-gray-500" /> Simulateur
                     </button>
@@ -72,12 +81,15 @@ export const TariffsSection = ({
                     <TariffCard 
                         key={tariff.id} 
                         tariff={tariff} 
+                        isAuditor={isAuditor}
                         onEdit={() => { 
-                            setEditingTariff(tariff); 
-                            setEditingTiers(Array.isArray(tariff.tiers) ? tariff.tiers : []); 
-                            setIsTariffModalOpen(true); 
+                            if (!isAuditor) {
+                                setEditingTariff(tariff); 
+                                setEditingTiers(Array.isArray(tariff.tiers) ? tariff.tiers : []); 
+                                setIsTariffModalOpen(true); 
+                            }
                         }} 
-                        onDelete={() => handleDeleteTariff(tariff.id!)}
+                        onDelete={() => !isAuditor && handleDeleteTariff(tariff.id!)}
                     />
                 ))}
             </div>
@@ -114,7 +126,7 @@ export const TariffsSection = ({
 
 // ─── Sous-Composants ──────────────────────────────────────────────
 
-const TariffCard = ({ tariff, onEdit, onDelete }: any) => {
+const TariffCard = ({ tariff, onEdit, onDelete, isAuditor = false }: any) => {
     const isSocial = tariff.id?.toLowerCase().includes('social');
     const tiers = Array.isArray(tariff.tiers) ? tariff.tiers : [];
 
@@ -152,10 +164,12 @@ const TariffCard = ({ tariff, onEdit, onDelete }: any) => {
                         </div>
                     </div>
                     
-                    <div className="flex gap-2">
-                        <button onClick={onEdit} className="p-3 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-2xl transition-all border border-white/10 outline-none"><Edit size={18} /></button>
-                        <button onClick={onDelete} className="p-3 bg-red-500/5 hover:bg-red-500 text-red-500/50 hover:text-white rounded-2xl transition-all border border-red-500/10 outline-none"><Trash2 size={18} /></button>
-                    </div>
+                    {!isAuditor && (
+                        <div className="flex gap-2">
+                            <button onClick={onEdit} className="p-3 bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white rounded-2xl transition-all border border-white/10 outline-none"><Edit size={18} /></button>
+                            <button onClick={onDelete} className="p-3 bg-red-500/5 hover:bg-red-500 text-red-500/50 hover:text-white rounded-2xl transition-all border border-red-500/10 outline-none"><Trash2 size={18} /></button>
+                        </div>
+                    )}
                 </div>
 
                 <p className="text-gray-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed mb-8 px-2 border-l-2 border-brand/20 italic italic">

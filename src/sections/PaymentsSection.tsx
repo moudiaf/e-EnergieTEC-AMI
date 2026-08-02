@@ -7,7 +7,8 @@ import {
   Smartphone, CreditCard, ArrowUpRight, CheckCircle2, 
   AlertCircle, Clock, Search, Filter, Download, 
   Wallet, PieChart, Activity, Zap, History, DollarSign,
-  RefreshCw, TrendingUp, ShieldCheck, ExternalLink, Receipt
+  RefreshCw, TrendingUp, ShieldCheck, ExternalLink, Receipt,
+  Banknote, Building2
 } from 'lucide-react';
 import { format, differenceInMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,11 +20,13 @@ function cn(...inputs: ClassValue[]) {
 interface PaymentsSectionProps {
   payments: Payment[];
   currentShift: Shift | null;
+  pastShifts: Shift[];
   onInitiatePayment?: () => void;
   onManageShift: () => void;
+  onRePrintShift: (shift: Shift) => void;
 }
 
-const OperatorStatus = ({ name, status, icon: Icon, color }: any) => (
+const OperatorStatus = ({ name, status, icon: Icon, color, volume = 0, count = 0 }: any) => (
   <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:border-brand/30 hover:bg-brand/5 transition-all">
     <div className="flex items-center gap-4">
       <div className={cn("p-2 rounded-xl bg-white/5", color)}>
@@ -31,20 +34,24 @@ const OperatorStatus = ({ name, status, icon: Icon, color }: any) => (
       </div>
       <div>
         <p className="text-[10px] font-black text-white uppercase tracking-widest leading-none">{name}</p>
-        <p className="text-[9px] text-gray-500 font-bold mt-1 uppercase">Latence: <span className="text-green-500">12ms</span></p>
+        <p className="text-[9px] text-gray-500 font-bold mt-1.5 uppercase">
+          {count} Tx · <span className="text-white font-mono">{volume.toLocaleString()} F</span>
+        </p>
       </div>
     </div>
     <div className="flex flex-col items-end">
       <span className={cn("text-[8px] font-black uppercase px-2 py-0.5 rounded", 
         status === 'Online' ? "bg-green-500/10 text-green-500" : "bg-orange-500/10 text-orange-500"
       )}>{status}</span>
+      <p className="text-[8px] text-gray-600 font-bold mt-1.5 uppercase">Latence: 12ms</p>
     </div>
   </div>
 );
 
-export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onManageShift }: PaymentsSectionProps) => {
+export const PaymentsSection = ({ payments, currentShift, pastShifts, onInitiatePayment, onManageShift, onRePrintShift }: PaymentsSectionProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
 
   // ─── Calculs ──────────────────────────────────────────────────
   const totalVolume = payments.reduce((acc, p) => acc + p.amount, 0);
@@ -53,6 +60,58 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
   
   const todayPayments = payments.filter(p => p.timestamp && new Date(p.timestamp) >= startOfDay(new Date()));
   const todayVolume = todayPayments.reduce((acc, p) => acc + p.amount, 0);
+
+  // Solde de caisse en direct (Caisse initiale + ventes CASH/AGENCY/NITA/AMANA)
+  const currentCashBalance = useMemo(() => {
+    if (!currentShift || currentShift.status === 'closed') return 0;
+    const shiftPayments = payments.filter(p => p.timestamp && new Date(p.timestamp) > new Date(currentShift.startTime));
+    const cashSales = shiftPayments
+      .filter(p => ['NITA', 'AMANA', 'AGENCY', 'CASH'].includes(p.operator))
+      .reduce((acc, p) => acc + p.amount, 0);
+    return currentShift.initialCash + cashSales;
+  }, [currentShift, payments]);
+
+  const lastClosedShift = useMemo(() => {
+    if (pastShifts.length === 0) return null;
+    return [...pastShifts]
+      .filter(s => s.status === 'closed')
+      .sort((a, b) => new Date(b.endTime || 0).getTime() - new Date(a.endTime || 0).getTime())[0];
+  }, [pastShifts]);
+
+  const operatorStats = useMemo(() => {
+    const statsMap: Record<string, { name: string; volume: number; count: number; pct: number; color: string; bg: string }> = {
+      'Orange': { name: 'Orange Money', volume: 0, count: 0, pct: 0, color: 'bg-orange-500', bg: 'text-orange-500' },
+      'Airtel': { name: 'Airtel Money', volume: 0, count: 0, pct: 0, color: 'bg-red-500', bg: 'text-red-500' },
+      'NITA':   { name: 'Transfert NITA', volume: 0, count: 0, pct: 0, color: 'bg-blue-500', bg: 'text-blue-500' },
+      'AMANA':  { name: 'Transfert AMANA', volume: 0, count: 0, pct: 0, color: 'bg-green-500', bg: 'text-green-500' },
+      'CASH':   { name: 'Encaissements CASH', volume: 0, count: 0, pct: 0, color: 'bg-yellow-500', bg: 'text-yellow-500' },
+      'AGENCY': { name: 'Ventes Agence', volume: 0, count: 0, pct: 0, color: 'bg-brand', bg: 'text-brand' },
+    };
+
+    const activePayments = currentShift && currentShift.status === 'open'
+      ? payments.filter(p => p.timestamp && new Date(p.timestamp) > new Date(currentShift.startTime))
+      : payments;
+
+    const totalActiveVolume = activePayments.reduce((acc, p) => acc + p.amount, 0);
+
+    activePayments.forEach(p => {
+      const op = p.operator;
+      if (statsMap[op]) {
+        statsMap[op].volume += p.amount;
+        statsMap[op].count += 1;
+      }
+    });
+
+    if (totalActiveVolume > 0) {
+      Object.keys(statsMap).forEach(key => {
+        statsMap[key].pct = Math.round((statsMap[key].volume / totalActiveVolume) * 100);
+      });
+    }
+
+    return statsMap;
+  }, [payments, currentShift]);
+
+  const operatorStatsList = useMemo(() => Object.values(operatorStats), [operatorStats]);
 
   // Temps écoulé du shift
   const shiftDuration = currentShift?.startTime 
@@ -70,6 +129,10 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
       p.operator.toLowerCase().includes(q)
     );
   }, [payments, searchTerm]);
+
+  const displayedPayments = useMemo(() => {
+    return showAllPayments ? filteredPayments : filteredPayments.slice(0, 10);
+  }, [filteredPayments, showAllPayments]);
 
   const refreshOperators = () => {
     setIsRefreshing(true);
@@ -146,12 +209,20 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
             glow: "bg-green-500" 
           },
           { 
-            title: "Solde Liquidité Caisse", 
-            value: (currentShift?.cashBalance || 0).toLocaleString(), 
-            sub: "Espèces physiques en main", 
+            title: currentShift?.status === 'open' ? "Solde Caisse Actif" : "Dernier Solde Liquidé", 
+            value: (currentShift?.status === 'open' 
+              ? currentCashBalance 
+              : (lastClosedShift ? (lastClosedShift.finalCash ?? lastClosedShift.expectedCash) : 0)
+            ).toLocaleString(), 
+            sub: currentShift?.status === 'open' 
+              ? "Espèces physiques en caisse" 
+              : (lastClosedShift && lastClosedShift.endTime 
+                  ? `Clôturé le ${format(new Date(lastClosedShift.endTime), 'dd/MM/yyyy à HH:mm')}` 
+                  : "Aucune session clôturée"
+                ), 
             icon: Banknote, 
-            trend: null, 
-            color: "text-blue-400", 
+            trend: currentShift?.status === 'open' ? "Session Active" : "Liquidé", 
+            color: currentShift?.status === 'open' ? "text-blue-400" : "text-gray-400", 
             glow: "bg-blue-500" 
           },
           { 
@@ -218,29 +289,29 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
                 <thead>
-                  <tr className="text-[9px] font-black text-gray-600 uppercase tracking-[0.2em] border-b border-white/5">
-                    <th className="px-8 py-5">VEE ID / Horodatage</th>
-                    <th className="px-8 py-5">Canal Collection</th>
-                    <th className="px-8 py-5">N° Compteur</th>
-                    <th className="px-8 py-5">Montant Collecté</th>
-                    <th className="px-8 py-5 text-right">Statut</th>
+                  <tr className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                    <th className="px-4 py-4">VEE ID / Horodatage</th>
+                    <th className="px-4 py-4">Canal Collection</th>
+                    <th className="px-4 py-4">N° Compteur</th>
+                    <th className="px-4 py-4">Montant Collecté</th>
+                    <th className="px-4 py-4 text-right">Statut</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
-                  {filteredPayments.length > 0 ? filteredPayments.slice(0, 8).map(p => (
-                    <tr key={p.id} className="hover:bg-white/[0.02] transition-all group">
-                      <td className="px-8 py-6">
-                        <p className="font-mono text-xs font-black text-brand">{p.id}</p>
+                <tbody className="">
+                  {displayedPayments.length > 0 ? displayedPayments.map(p => (
+                    <tr key={p.id} className="group transition-all">
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
+                        <p className="font-mono text-xs font-black text-brand tracking-tighter">{p.id}</p>
                         <p className="text-[9px] text-gray-600 font-bold mt-1 uppercase">
                           {p.timestamp ? format(new Date(p.timestamp), 'dd MMM • HH:mm', { locale: fr }) : 'A l\'instant'}
                         </p>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                         <div className="flex items-center gap-3">
                           <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-lg",
+                            "w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-[11px] shadow-lg transition-transform group-hover:scale-110",
                             p.operator === 'Orange' ? "bg-orange-600 shadow-orange-600/20" :
                             p.operator === 'Airtel' ? "bg-red-600 shadow-red-600/20" : 
                             p.operator === 'NITA' ? "bg-blue-600 shadow-blue-600/20" : 
@@ -248,21 +319,24 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
                           )}>
                             {p.operator.charAt(0)}
                           </div>
-                          <span className="font-black text-white text-xs uppercase">{p.operator}</span>
+                          <span className="font-black text-white text-xs uppercase tracking-tight">{p.operator}</span>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <p className="font-mono text-xs text-gray-400">{p.meterId}</p>
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <div className="flex items-center gap-2">
+                           <Smartphone size={12} className="text-gray-600" />
+                           <p className="font-mono text-xs text-gray-400">{p.meterId}</p>
+                        </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                         <div className="flex flex-col">
-                          <span className="text-sm font-black text-white">{p.amount.toLocaleString()} FCFA</span>
-                          <span className="text-[8px] text-green-500/70 font-black uppercase">Réconcilié</span>
+                          <span className="text-sm font-black text-white tracking-tight">{p.amount.toLocaleString()} FCFA</span>
+                          <span className="text-[8px] text-green-500/70 font-black uppercase tracking-widest mt-0.5">Réconcilié Gateway</span>
                         </div>
                       </td>
-                      <td className="px-8 py-6 text-right">
-                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[9px] font-black uppercase">
-                           <CheckCircle2 size={10} /> Validé
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
+                         <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-500 rounded-xl text-[9px] font-black uppercase border border-green-500/20">
+                           <CheckCircle2 size={10} className="animate-pulse" /> Validé
                          </div>
                       </td>
                     </tr>
@@ -274,10 +348,106 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
                 </tbody>
               </table>
             </div>
-            <div className="p-4 bg-white/5 border-t border-white/5 flex justify-center">
-              <button className="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest flex items-center gap-2 transition-colors">
-                Voir toutes les archives du shift <ArrowUpRight size={12} />
-              </button>
+            {filteredPayments.length > 10 && (
+              <div className="p-4 bg-white/5 border-t border-white/5 flex justify-center">
+                <button 
+                  onClick={() => setShowAllPayments(!showAllPayments)}
+                  className="text-[9px] font-black text-gray-500 hover:text-white uppercase tracking-widest flex items-center gap-2 transition-colors"
+                >
+                  {showAllPayments ? "Réduire la liste" : "Voir toutes les archives du shift"} 
+                  <ArrowUpRight size={12} className={cn(showAllPayments && "rotate-90 transition-transform")} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ── Table d'Audit de Liquidation des Caisses ──────────────── */}
+          <div className="glass-panel rounded-[2.5rem] border border-white/5 overflow-hidden shadow-2xl bg-bg-dark/40 mt-8">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center">
+              <div>
+                <h4 className="font-black text-lg text-white uppercase tracking-tight flex items-center gap-3">
+                  <History size={20} className="text-brand" /> Registre de Liquidation des Caisses
+                </h4>
+                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Audit et réconciliation des quittances physiques de session</p>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
+                <thead>
+                  <tr className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                    <th className="px-4 py-4">ID Session / Période</th>
+                    <th className="px-4 py-4">Caisse Départ</th>
+                    <th className="px-4 py-4">Ventes Caisse</th>
+                    <th className="px-4 py-4">Montant Attendu</th>
+                    <th className="px-4 py-4">Montant Liquidé</th>
+                    <th className="px-4 py-4 text-center">Écart de Caisse</th>
+                    <th className="px-4 py-4 text-right">Rapport</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pastShifts.length > 0 ? [...pastShifts].reverse().map(s => {
+                    const cashSales = s.expectedCash - s.initialCash;
+                    const gap = (s.finalCash ?? s.expectedCash) - s.expectedCash;
+                    return (
+                      <tr key={s.id} className="group transition-all">
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
+                          <p className="font-mono text-xs font-black text-brand tracking-tighter">{s.id}</p>
+                          <p className="text-[9px] text-gray-600 font-bold mt-1 uppercase">
+                            Début: {format(new Date(s.startTime), 'dd MMM HH:mm', { locale: fr })}
+                            {s.endTime && ` • Fin: ${format(new Date(s.endTime), 'dd MMM HH:mm', { locale: fr })}`}
+                          </p>
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors font-mono text-xs text-white font-bold">
+                          {s.initialCash.toLocaleString()} F
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors font-mono text-xs text-white font-bold">
+                          {cashSales.toLocaleString()} F
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors font-mono text-xs text-brand font-black">
+                          {s.expectedCash.toLocaleString()} F
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors font-mono text-xs text-white font-black">
+                          {s.status === 'open' ? (
+                            <span className="text-[9px] font-black text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg uppercase">En cours</span>
+                          ) : (
+                            `${(s.finalCash ?? s.expectedCash).toLocaleString()} F`
+                          )}
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors text-center">
+                          {s.status === 'open' ? (
+                            <span className="text-gray-600 font-bold">-</span>
+                          ) : (
+                            <span className={cn(
+                              "inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border",
+                              gap === 0 
+                                ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                                : "bg-red-500/10 text-red-500 border-red-500/20"
+                            )}>
+                              {gap === 0 ? "Équilibré" : `${gap > 0 ? '+' : ''}${gap.toLocaleString()} F`}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
+                          {s.status === 'closed' && (
+                            <button 
+                              onClick={() => onRePrintShift(s)}
+                              className="p-2 bg-white/5 hover:bg-brand text-gray-400 hover:text-white rounded-xl transition-all"
+                              title="Réimprimer le ticket de clôture"
+                            >
+                              <Download size={14} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr>
+                      <td colSpan={7} className="px-8 py-20 text-center text-gray-600 font-black uppercase text-xs opacity-30">Aucun shift clôturé</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -325,10 +495,10 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
                </button>
             </div>
             <div className="space-y-3">
-               <OperatorStatus name="Orange Money Hub" status="Online" icon={Smartphone} color="text-orange-500" />
-               <OperatorStatus name="Airtel Cash GW" status="Online" icon={CreditCard} color="text-red-500" />
-               <OperatorStatus name="NITA Cash Vending" status="Online" icon={Wallet} color="text-blue-500" />
-               <OperatorStatus name="Collecte AMANA" status="Online" icon={Building2} color="text-green-500" />
+               <OperatorStatus name="Orange Money Hub" status="Online" icon={Smartphone} color="text-orange-500" volume={operatorStats.Orange.volume} count={operatorStats.Orange.count} />
+               <OperatorStatus name="Airtel Cash GW" status="Online" icon={CreditCard} color="text-red-500" volume={operatorStats.Airtel.volume} count={operatorStats.Airtel.count} />
+               <OperatorStatus name="NITA Cash Vending" status="Online" icon={Wallet} color="text-blue-500" volume={operatorStats.NITA.volume} count={operatorStats.NITA.count} />
+               <OperatorStatus name="Collecte AMANA" status="Online" icon={Building2} color="text-green-500" volume={operatorStats.AMANA.volume} count={operatorStats.AMANA.count} />
             </div>
             <div className="mt-6 p-4 bg-green-500/5 border border-green-500/10 rounded-2xl flex items-center gap-3">
               <CheckCircle2 size={16} className="text-green-500" />
@@ -336,26 +506,25 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
             </div>
           </div>
 
-          {/* Distribution Graph Simulation */}
+          {/* Distribution Graph - Real Audit */}
           <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-bg-dark/40 shadow-2xl">
              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-8 flex items-center gap-2">
-               <PieChart size={14} className="text-brand" /> Mix des Collections (Today)
+               <PieChart size={14} className="text-brand" /> Audit des Canaux (Orange, Airtel, NITA, AMANA)
              </h4>
              <div className="space-y-6">
-               {[
-                 { name: 'Portefeuilles Mobiles', volume: todayVolume * 0.65, pct: '65%', color: 'bg-brand' },
-                 { name: 'Encaissements CASH', volume: todayVolume * 0.25, pct: '25%', color: 'bg-blue-600' },
-                 { name: 'Ventes Agence', volume: todayVolume * 0.10, pct: '10%', color: 'bg-green-600' }
-               ].map(canal => (
+               {operatorStatsList.map(canal => (
                  <div key={canal.name} className="space-y-2">
                    <div className="flex justify-between items-end">
-                     <span className="text-[10px] font-black text-white uppercase tracking-tight">{canal.name}</span>
-                     <span className="text-[10px] font-black text-gray-500">{canal.pct}</span>
+                     <div className="flex flex-col">
+                       <span className="text-[10px] font-black text-white uppercase tracking-tight">{canal.name}</span>
+                       <span className="text-[8px] text-gray-500 font-bold uppercase mt-0.5">{canal.count} transaction(s)</span>
+                     </div>
+                     <span className="text-[10px] font-black text-gray-500">{canal.pct}%</span>
                    </div>
                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                     <motion.div initial={{ width: 0 }} animate={{ width: canal.pct }} transition={{ duration: 1.5 }} className={cn("h-full", canal.color)}></motion.div>
+                     <motion.div initial={{ width: 0 }} animate={{ width: `${canal.pct}%` }} transition={{ duration: 1.5 }} className={cn("h-full", canal.color)}></motion.div>
                    </div>
-                   <p className="text-[9px] text-gray-600 font-bold">{canal.volume.toLocaleString()} F réconciliés</p>
+                   <p className="text-[9px] text-gray-400 font-black tracking-tight">{canal.volume.toLocaleString()} FCFA réconciliés</p>
                  </div>
                ))}
              </div>
@@ -374,7 +543,3 @@ export const PaymentsSection = ({ payments, currentShift, onInitiatePayment, onM
     </motion.div>
   );
 };
-
-// Component placeholders for missing icons
-const Banknote = ({ size, className }: any) => <DollarSign size={size} className={className} />;
-const Building2 = ({ size, className }: any) => <Smartphone size={size} className={className} />;

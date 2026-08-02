@@ -31,20 +31,36 @@ export const ViewingMeterModal: React.FC<ViewingMeterModalProps> = ({
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4">
-           <div className="p-4 bg-white/5 rounded-2xl border border-white/10 col-span-2">
-             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Client Associé</p>
-             <p className="font-bold text-sm cursor-pointer hover:text-brand transition-colors" onClick={() => {
-               onClose();
-               setCurrentSection('customers');
-             }}>{customers.find(c => c.id === viewingMeter.customerId)?.name || viewingMeter.customerId}</p>
-           </div>
-        </div>
+         <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Client Associé</p>
+              <p className="font-bold text-sm cursor-pointer hover:text-brand transition-colors" onClick={() => {
+                onClose();
+                setCurrentSection('customers');
+              }}>{customers.find(c => c.id === viewingMeter.customerId)?.name || viewingMeter.customerId}</p>
+            </div>
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Lot / Batch</p>
+              <p className="font-bold text-sm text-white">{viewingMeter.batchId || 'N/A'}</p>
+            </div>
+         </div>
+         
+         <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+           <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Date d'Enregistrement Système</p>
+           <p className="font-bold text-sm text-gray-300">{viewingMeter.registeredAt ? viewingMeter.registeredAt.split('T')[0] : 'N/A'}</p>
+         </div>
         
         <div className="grid grid-cols-3 gap-4">
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Tension</p>
-            <p className="font-black text-xl text-green-400">{viewingMeter.voltage || 230}V</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
+              Tension {viewingMeter.phaseType === 'triphase' ? '(L-L)' : '(L-N)'}
+            </p>
+            <p className="font-black text-xl text-green-400">{viewingMeter.voltage || (viewingMeter.phaseType === 'triphase' ? 400 : 230)}V</p>
+            <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${
+              viewingMeter.phaseType === 'triphase' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+            }`}>
+              {viewingMeter.phaseType === 'triphase' ? '3φ Triphasé' : '1φ Monophasé'}
+            </span>
           </div>
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Puissance</p>

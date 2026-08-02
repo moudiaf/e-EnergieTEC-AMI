@@ -13,14 +13,45 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+import { User, Meter, Customer } from '../types';
+
 interface SettingsSectionProps {
   settings: any;
   onSave: (settings: any) => Promise<void>;
+  currentUser?: User | null;
+  meters?: Meter[];
+  customers?: Customer[];
 }
 
-export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
+export const SettingsSection = ({ 
+  settings, 
+  onSave, 
+  currentUser, 
+  meters = [], 
+  customers = [] 
+}: SettingsSectionProps) => {
   const [localSettings, setLocalSettings] = React.useState(settings);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  // Customer and Auditor role flags
+  const isCustomer = currentUser?.role === 'customer';
+  const isAuditor = currentUser?.role === 'auditor';
+  const customerInfo = customers.find(c => c.id === currentUser?.associatedCustomerId);
+  const customerMeter = meters.find(m => m.customerId === currentUser?.associatedCustomerId);
+
+  const [customerForm, setCustomerForm] = React.useState({
+    phone: customerInfo?.phone || '+227 90 12 34 56',
+    email: 'jean.dupont@email.ne',
+    address: customerInfo?.address || 'Résidence A - Apt 101, Niamey',
+    smsAlerts: true,
+    lowCreditAlerts: true,
+    emailInvoices: true,
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [customerSuccessMsg, setCustomerSuccessMsg] = React.useState('');
 
   React.useEffect(() => {
     setLocalSettings(settings);
@@ -35,6 +66,253 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
     await onSave(localSettings);
     setIsSaving(false);
   };
+
+  const handleSaveCustomerProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setCustomerSuccessMsg('Vos préférences et informations de compte ont été mises à jour avec succès.');
+      setTimeout(() => setCustomerSuccessMsg(''), 4000);
+    }, 600);
+  };
+
+  // ─── RENDU DU PORTAIL COMPTE ABONNÉ (ROLE CLIENT) ─────────────────
+  if (isCustomer) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="max-w-5xl mx-auto space-y-8 pb-32 text-white"
+      >
+        {/* Header Client */}
+        <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/5 pb-8">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 bg-brand/20 text-brand text-[9px] font-black uppercase rounded-full border border-brand/30 tracking-widest">
+                Portail Abonné
+              </span>
+              <span className="text-[9px] font-bold text-niger-green uppercase tracking-widest bg-niger-green/10 px-3 py-1 rounded-full border border-niger-green/20">
+                Compteur NIGELEC Synchronisé
+              </span>
+            </div>
+            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter">Mon Profil & <span className="text-brand">Paramètres</span></h3>
+            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Gérer vos coordonnées, préférences d'alertes et la sécurité de votre compte</p>
+          </div>
+        </div>
+
+        {customerSuccessMsg && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl text-green-400 text-xs font-bold flex items-center gap-3"
+          >
+            <ShieldCheck size={18} />
+            <span>{customerSuccessMsg}</span>
+          </motion.div>
+        )}
+
+        <form onSubmit={handleSaveCustomerProfile} className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* CARD 1 : INFORMATIONS PERSONNELLES */}
+            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-black">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'J'}
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">{currentUser?.name || 'Jean Dupont'}</h4>
+                  <p className="text-[10px] text-brand font-black uppercase tracking-widest mt-0.5">N° Abonné : {currentUser?.associatedCustomerId || 'C001'}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">N° Téléphone Mobile</label>
+                  <input 
+                    type="text" 
+                    value={customerForm.phone}
+                    onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })}
+                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Adresse Email</label>
+                  <input 
+                    type="email" 
+                    value={customerForm.email}
+                    onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })}
+                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Adresse de Résidence</label>
+                  <input 
+                    type="text" 
+                    value={customerForm.address}
+                    onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })}
+                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 2 : CARACTÉRISTIQUES DU COMPTEUR */}
+            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-niger-green/10 border border-niger-green/20 flex items-center justify-center text-niger-green">
+                  <Zap size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Compteur Associé</h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Contrat NIGELEC Actif</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">N° Compteur STS</span>
+                  <span className="text-base font-black text-white font-mono">{customerMeter?.id || '541-234-567'}</span>
+                </div>
+
+                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Tarif Souscrit</span>
+                  <span className="text-xs font-black text-brand uppercase">Tarif Domestique BT</span>
+                </div>
+
+                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Puissance Souscrite</span>
+                  <span className="text-xs font-black text-white">3 kVA (15A)</span>
+                </div>
+
+                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Solde Actuel</span>
+                  <span className="text-sm font-black text-niger-green font-mono">{(customerMeter?.credit || 27.65).toFixed(2)} kWh</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3 : PRÉFÉRENCES DE NOTIFICATIONS */}
+            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                  <Bell size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Préférences de Notification</h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Canaux d'alertes & SMS</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                  <div>
+                    <p className="text-xs font-black text-white uppercase">SMS de confirmation de recharge</p>
+                    <p className="text-[10px] text-gray-500">Recevoir le code Token de 20 chiffres par SMS</p>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={customerForm.smsAlerts}
+                    onChange={e => setCustomerForm({ ...customerForm, smsAlerts: e.target.checked })}
+                    className="w-5 h-5 accent-brand cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                  <div>
+                    <p className="text-xs font-black text-white uppercase">Alerte Solde Crédit Bas (&lt; 10 kWh)</p>
+                    <p className="text-[10px] text-gray-500">Avertissement automatique avant coupure</p>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={customerForm.lowCreditAlerts}
+                    onChange={e => setCustomerForm({ ...customerForm, lowCreditAlerts: e.target.checked })}
+                    className="w-5 h-5 accent-brand cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                  <div>
+                    <p className="text-xs font-black text-white uppercase">Reçus de Paiement par Email</p>
+                    <p className="text-[10px] text-gray-500">Envoi automatique du duplicata PDF</p>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={customerForm.emailInvoices}
+                    onChange={e => setCustomerForm({ ...customerForm, emailInvoices: e.target.checked })}
+                    className="w-5 h-5 accent-brand cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 4 : SÉCURITÉ & MOT DE PASSE */}
+            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                  <Lock size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Sécurité du Compte</h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Modifier votre mot de passe</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Mot de passe actuel</label>
+                  <input 
+                    type="password"
+                    placeholder="••••••••"
+                    value={customerForm.currentPassword}
+                    onChange={e => setCustomerForm({ ...customerForm, currentPassword: e.target.value })}
+                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Nouveau mot de passe</label>
+                    <input 
+                      type="password"
+                      placeholder="••••••••"
+                      value={customerForm.newPassword}
+                      onChange={e => setCustomerForm({ ...customerForm, newPassword: e.target.value })}
+                      className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Confirmer</label>
+                    <input 
+                      type="password"
+                      placeholder="••••••••"
+                      value={customerForm.confirmPassword}
+                      onChange={e => setCustomerForm({ ...customerForm, confirmPassword: e.target.value })}
+                      className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div className="flex justify-end">
+            <button 
+              type="submit"
+              disabled={isSaving}
+              className="px-10 py-4 bg-brand hover:bg-brand-light rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-brand/20 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSaving ? "Enregistrement..." : "Mettre à jour mon profil abonné"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 
@@ -56,6 +334,11 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
         </div>
         
         <div className="flex gap-4">
+          {isAuditor ? (
+            <div className="px-6 py-3.5 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-yellow-400 font-black text-xs uppercase tracking-widest flex items-center gap-3">
+              <Lock size={16} /> Mode Consultation (Lecture Seule ARSE)
+            </div>
+          ) : (
             <button 
                 onClick={handleSaveInternal}
                 disabled={isSaving}
@@ -67,6 +350,7 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                     {isSaving ? 'Synchronisation...' : 'Enregistrer les Changements'}
                 </span>
             </button>
+          )}
         </div>
       </div>
 
@@ -94,9 +378,13 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                             <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-700 group-focus-within:text-brand transition-colors" size={16} />
                             <input 
                                 type="text" 
+                                disabled={isAuditor}
                                 value={localSettings.sgc || '600451'} 
                                 onChange={(e) => handleChange('sgc', e.target.value)}
-                                className="w-full h-14 bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 text-white font-mono font-black placeholder:text-gray-800 focus:outline-none focus:border-brand/40 uppercase tracking-widest transition-all" 
+                                className={cn(
+                                    "w-full h-14 bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 text-white font-mono font-black placeholder:text-gray-800 focus:outline-none focus:border-brand/40 uppercase tracking-widest transition-all",
+                                    isAuditor && "opacity-60 cursor-not-allowed"
+                                )}
                             />
                         </div>
                         <p className="text-[8px] text-gray-700 font-bold uppercase tracking-tighter px-1">Identifiant unique NIGELEC</p>
@@ -105,9 +393,13 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Key Revision (KRN)</label>
                         <div className="relative">
                             <select 
+                                disabled={isAuditor}
                                 value={localSettings.krn || '1'} 
                                 onChange={(e) => handleChange('krn', e.target.value)}
-                                className="w-full h-14 bg-black/40 border border-white/5 rounded-2xl px-6 text-white font-black appearance-none outline-none focus:border-brand/40 uppercase tracking-widest cursor-pointer transition-all"
+                                className={cn(
+                                    "w-full h-14 bg-black/40 border border-white/5 rounded-2xl px-6 text-white font-black appearance-none outline-none focus:border-brand/40 uppercase tracking-widest cursor-pointer transition-all",
+                                    isAuditor && "opacity-60 cursor-not-allowed"
+                                )}
                             >
                                 <option value="1">Revision 1 (Current)</option>
                                 <option value="2">Revision 2 (Rollover Enabled)</option>
@@ -119,7 +411,13 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
 
                   <div className="p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/10 flex flex-col items-center text-center">
                     <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-4">Fonction Critique : Transition Clé de Racine</p>
-                    <button className="px-8 py-3 bg-white/5 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/20 rounded-xl transition-all flex items-center gap-3 group">
+                    <button 
+                        disabled={isAuditor}
+                        className={cn(
+                            "px-8 py-3 bg-white/5 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/20 rounded-xl transition-all flex items-center gap-3 group",
+                            isAuditor && "opacity-40 cursor-not-allowed hover:bg-white/5 hover:text-orange-500"
+                        )}
+                    >
                         <RotateCcw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
                         <span className="text-[9px] font-black uppercase tracking-widest">Rollover National Automatisé</span>
                     </button>
@@ -149,9 +447,13 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         <div className="flex items-end gap-2">
                             <input 
                                 type="number" 
+                                disabled={isAuditor}
                                 value={localSettings.vat_rate || 19} 
                                 onChange={(e) => handleChange('vat_rate', parseFloat(e.target.value))}
-                                className="w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-brand/30"
+                                className={cn(
+                                    "w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-brand/30",
+                                    isAuditor && "opacity-60 cursor-not-allowed"
+                                )}
                             />
                             <span className="text-sm font-black text-brand mb-1">%</span>
                         </div>
@@ -165,9 +467,13 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         <div className="flex items-end gap-2">
                             <input 
                                 type="number" 
+                                disabled={isAuditor}
                                 value={localSettings.tech_loss_threshold || 7.5} 
                                 onChange={(e) => handleChange('tech_loss_threshold', parseFloat(e.target.value))}
-                                className="w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-orange-500/30"
+                                className={cn(
+                                    "w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-orange-500/30",
+                                    isAuditor && "opacity-60 cursor-not-allowed"
+                                )}
                             />
                             <span className="text-sm font-black text-orange-500 mb-1">%</span>
                         </div>
@@ -180,12 +486,14 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         {['Quotidien', 'Hebdomadaire', 'Mensuel'].map(f => (
                             <button 
                                 key={f}
+                                disabled={isAuditor}
                                 onClick={() => handleChange('audit_frequency', f)}
                                 className={cn(
                                     "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all",
                                     localSettings.audit_frequency === f || (!localSettings.audit_frequency && f === 'Mensuel') 
                                         ? "bg-blue-500/10 border-blue-500 text-white shadow-lg shadow-blue-500/10" 
-                                        : "bg-white/5 border-white/5 text-gray-600 hover:border-white/20"
+                                        : "bg-white/5 border-white/5 text-gray-600 hover:border-white/20",
+                                    isAuditor && "opacity-60 cursor-not-allowed"
                                 )}
                             >
                                 {f}
@@ -217,6 +525,7 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         active={localSettings.maintenance_mode} 
                         color="text-orange-500" 
                         onToggle={() => handleChange('maintenance_mode', !localSettings.maintenance_mode)} 
+                        disabled={isAuditor}
                     />
                     <ToggleCard 
                         icon={Smartphone} 
@@ -225,6 +534,7 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         active={localSettings.sms_gateway_active} 
                         color="text-brand" 
                         onToggle={() => handleChange('sms_gateway_active', !localSettings.sms_gateway_active)} 
+                        disabled={isAuditor}
                     />
                     <ToggleCard 
                         icon={Globe} 
@@ -233,6 +543,7 @@ export const SettingsSection = ({ settings, onSave }: SettingsSectionProps) => {
                         active={localSettings.geo_redundancy_active} 
                         color="text-blue-400" 
                         onToggle={() => handleChange('geo_redundancy_active', !localSettings.geo_redundancy_active)} 
+                        disabled={isAuditor}
                     />
                     <ToggleCard 
                         icon={Signal} 

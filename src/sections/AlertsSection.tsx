@@ -66,7 +66,7 @@ export const AlertsSection = ({
 
   const critCount = (alerts || []).filter(a => a.priority === 'Critique' || a.type === 'danger').length;
   const warnCount = (alerts || []).filter(a => a.priority === 'Haute' || a.type === 'warning').length;
-  const infoCount = (alerts || []).filter(a => a.priority === 'Normale' || a.type === 'info').length;
+  const infoCount = (alerts || []).filter(a => a.priority === 'Basse' || a.priority === 'Moyenne' || a.type === 'info').length;
 
   return (
     <motion.div key="alerts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-12">
@@ -269,54 +269,56 @@ export const AlertsSection = ({
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
               <thead>
-                <tr className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] border-b border-white/5">
-                  <th className="px-8 py-6">Règle de Surveillance</th>
-                  <th className="px-8 py-6">Condition de Déclenchement</th>
-                  <th className="px-8 py-6">Vecteurs de Notification</th>
-                  <th className="px-8 py-6">Statut</th>
-                  <th className="px-8 py-6 text-right">Actions</th>
+                <tr className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                  <th className="px-4 py-4">Règle de Surveillance</th>
+                  <th className="px-4 py-4">Condition de Déclenchement</th>
+                  <th className="px-4 py-4">Vecteurs de Notification</th>
+                  <th className="px-4 py-4 text-center">Statut</th>
+                  <th className="px-4 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="">
                 {(alertRules || []).map(rule => (
-                  <tr key={rule.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-8 py-6">
-                      <p className="text-sm font-black text-white leading-tight">{rule.name}</p>
-                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Audit continu MDMS</p>
+                  <tr key={rule.id} className="group transition-all">
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
+                      <p className="text-sm font-black text-white leading-tight uppercase tracking-tight">{rule.name}</p>
+                      <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Audit continu MDMS Engine</p>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/5 border border-red-500/20 rounded-xl">
                         <Activity size={12} className="text-red-500" />
                         <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">{rule.condition}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                       <div className="flex gap-2">
-                        <div className={cn("p-2 rounded-xl transition-all", rule.notifySms ? "bg-brand/20 text-brand" : "bg-white/5 text-gray-700")}>
+                        <div className={cn("p-2.5 rounded-xl transition-all border border-white/5", rule.notifySms ? "bg-brand/20 text-brand border-brand/30" : "bg-white/5 text-gray-700")}>
                           <Smartphone size={16} />
                         </div>
-                        <div className={cn("p-2 rounded-xl transition-all", rule.notifyEmail ? "bg-blue-500/20 text-blue-500" : "bg-white/5 text-gray-700")}>
+                        <div className={cn("p-2.5 rounded-xl transition-all border border-white/5", rule.notifyEmail ? "bg-blue-500/20 text-blue-500 border-blue-500/30" : "bg-white/5 text-gray-700")}>
                           <Mail size={16} />
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <button 
-                        onClick={() => onUpdateRule({ ...rule, active: !rule.active })}
-                        className={cn(
-                          "w-12 h-6 rounded-full relative transition-all duration-300",
-                          rule.active ? "bg-green-500 shadow-[0_0_15px_#22c55e44]" : "bg-white/10"
-                        )}
-                      >
-                         <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300", rule.active ? "left-7" : "left-1")} />
-                      </button>
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                      <div className="flex justify-center">
+                        <button 
+                          onClick={() => onUpdateRule({ ...rule, active: !rule.active })}
+                          className={cn(
+                            "w-12 h-6 rounded-full relative transition-all duration-300 border border-white/10",
+                            rule.active ? "bg-red-500 shadow-[0_0_15px_#ef444444]" : "bg-white/10"
+                          )}
+                        >
+                           <div className={cn("absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full transition-all duration-300 shadow-lg", rule.active ? "left-6.5" : "left-0.5")} />
+                        </button>
+                      </div>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button className="p-2.5 rounded-xl bg-white/5 text-gray-500 hover:text-white border border-white/5 transition-all"><Edit size={16} /></button>
-                        <button className="p-2.5 rounded-xl bg-white/5 text-gray-500 hover:text-red-500 border border-white/5 transition-all"><Trash2 size={16} /></button>
+                    <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
+                        <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white border border-white/5 transition-all"><Edit size={16} /></button>
+                        <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-red-500 border border-white/5 transition-all"><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

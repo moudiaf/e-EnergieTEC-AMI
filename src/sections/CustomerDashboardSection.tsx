@@ -99,8 +99,8 @@ export const CustomerDashboardSection = ({
 
        <div className="glass-panel p-8 rounded-3xl border border-white/5">
           <h4 className="font-bold text-lg mb-8">Ma Consommation (Simulée)</h4>
-          <div className="h-[250px] w-full">
-             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="h-[250px] w-full relative overflow-hidden" style={{ minHeight: '250px', minWidth: '0' }}>
+             <ResponsiveContainer width="100%" height={250} debounce={50}>
                 <AreaChart data={[
                     { day: 'Lun', val: 5.2 }, { day: 'Mar', val: 4.8 }, { day: 'Mer', val: 7.5 },
                     { day: 'Jeu', val: 6.2 }, { day: 'Ven', val: 8.5 }, { day: 'Sam', val: 12.0 },

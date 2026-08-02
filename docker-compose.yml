@@ -113,12 +113,15 @@ services:
   ml-fraud-detector:
     build: ./services/ml-fraud-detector
     container_name: nigelec-ml-fraud
+    ports:
+      - "5001:5001"
     environment:
       - DB_HOST=timescaledb
       - DB_USER=nigelec_admin
       - DB_PASS=SecurePass2026!
       - DB_NAME=ami_mdms
       - KAFKA_BROKER=kafka:9092
+      - PORT=5001
     depends_on:
       - timescaledb
       - kafka

@@ -49,11 +49,11 @@ export const UsersSection = ({
     handleDeleteUser
 }: UsersSectionProps) => {
     const [searchTerm, setSearchTerm] = useState('');
-
-    const filteredUsers = users.filter(u => 
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.role.toLowerCase().includes(searchTerm.toLowerCase())
+    const safeUsers = Array.isArray(users) ? users : [];
+    const filteredUsers = safeUsers.filter(u => 
+        (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (u.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.role || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -99,10 +99,10 @@ export const UsersSection = ({
 
             {/* ── Dashboard de Habilitation ─────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <SecurityStat label="Administrateurs" value={users.filter(u => u.role === 'admin').length} icon={Shield} color="text-red-500" bg="bg-red-500/10" />
-                <SecurityStat label="Managers" value={users.filter(u => u.role === 'manager').length} icon={UserCheck} color="text-brand" bg="bg-brand/10" />
-                <SecurityStat label="Experts Terrain" value={users.filter(u => u.role === 'tech').length} icon={Server} color="text-blue-400" bg="bg-blue-400/10" />
-                <SecurityStat label="Sessions Actives" value={users.length} icon={Activity} color="text-niger-green" bg="bg-niger-green/10" />
+                <SecurityStat label="Administrateurs" value={safeUsers.filter(u => u.role === 'admin').length} icon={Shield} color="text-red-500" bg="bg-red-500/10" />
+                <SecurityStat label="Managers" value={safeUsers.filter(u => u.role === 'manager').length} icon={UserCheck} color="text-brand" bg="bg-brand/10" />
+                <SecurityStat label="Experts Terrain" value={safeUsers.filter(u => u.role === 'tech').length} icon={Server} color="text-blue-400" bg="bg-blue-400/10" />
+                <SecurityStat label="Sessions Actives" value={safeUsers.length} icon={Activity} color="text-niger-green" bg="bg-niger-green/10" />
             </div>
 
             {/* ── Grid des Opérateurs ────────────────────────────────── */}

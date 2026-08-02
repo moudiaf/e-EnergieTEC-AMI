@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, MapPin, Search, Users, UserCheck, UserX, User, Phone, Mail, X, Eye, Zap, CreditCard, Calendar } from 'lucide-react';
-import { Customer, Meter } from '../types';
+import { Plus, Edit, Trash2, MapPin, Search, Users, UserCheck, UserX, User, Phone, Mail, X, Eye, Zap, CreditCard, Calendar, Clock, TrendingUp, Filter, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Customer, Meter, Region } from '../types';
 import { maskEmail, maskPhone } from '../utils/privacy';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -48,7 +48,9 @@ interface CustomersSectionProps {
   handleDeleteCustomer: (id: string) => void;
   setViewingMeter: (meter: Meter | null) => void;
   meters: Meter[];
+  regions: Region[];
   setCurrentSection: (section: string) => void;
+  setMeterSearch?: (s: string) => void;
 }
 
 export const CustomersSection = ({
@@ -60,9 +62,12 @@ export const CustomersSection = ({
   handleDeleteCustomer,
   setViewingMeter,
   meters,
+  regions,
   setCurrentSection,
+  setMeterSearch,
 }: CustomersSectionProps) => {
   const [search, setSearch] = React.useState('');
+  const [zoneFilter, setZoneFilter] = React.useState('all');
   const [viewingCustomer, setViewingCustomer] = React.useState<Customer | null>(null);
 
   // ─── KPIs ─────────────────────────────────────────────────────
@@ -74,20 +79,21 @@ export const CustomersSection = ({
   // ─── Filtres + Recherche ───────────────────────────────────────
   const filtered = React.useMemo(() => {
     let list = customers.filter(c =>
-      customerStatusFilter === 'all' || c.status === customerStatusFilter
+      (customerStatusFilter === 'all' || c.status === customerStatusFilter) &&
+      (zoneFilter === 'all' || c.regionId === zoneFilter)
     );
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.id.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.type?.toLowerCase().includes(q) ||
-        c.address?.toLowerCase().includes(q)
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.id || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.type || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
       );
     }
     return list;
-  }, [customers, customerStatusFilter, search]);
+  }, [customers, customerStatusFilter, zoneFilter, search]);
 
   const FILTERS = [
     { key: 'all',       label: 'Tous',      count: customers.length,  icon: Users },
@@ -214,66 +220,88 @@ export const CustomersSection = ({
       )}
 
       {/* ── KPI Bar ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Abonnés',    value: customers.length, icon: Users,      color: 'text-white',     bg: 'from-white/5' },
-          { label: 'Actifs',           value: activeCount,     icon: UserCheck,  color: 'text-green-400', bg: 'from-green-500/10' },
-          { label: 'Suspendus',        value: suspendedCount,  icon: UserX,      color: 'text-red-400',   bg: 'from-red-500/10' },
-          { label: 'Compteurs liés',   value: totalMeters,     icon: Zap,        color: 'text-brand',     bg: 'from-brand/10' },
+          { label: 'Total Abonnés',    value: customers.length, icon: Users,      color: 'text-white',     bg: 'from-white/5', trend: '+3.1%', trendColor: 'text-green-400' },
+          { label: 'Actifs',           value: activeCount,     icon: UserCheck,  color: 'text-green-400', bg: 'from-green-500/10', trend: '+2.9%', trendColor: 'text-green-400' },
+          { label: 'Suspendus',        value: suspendedCount,  icon: UserX,      color: 'text-red-400',   bg: 'from-red-500/10', trend: '-1.2%', trendColor: 'text-red-400' },
+          { label: 'Compteurs liés',   value: totalMeters,     icon: Zap,        color: 'text-brand',     bg: 'from-brand/10', trend: '+4.5%', trendColor: 'text-green-400' },
         ].map((k, i) => (
-          <div key={i} className={cn("glass-panel p-5 rounded-2xl border border-white/5 bg-gradient-to-br to-transparent", k.bg)}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{k.label}</p>
-              <k.icon size={14} className={k.color} />
+          <div key={i} className={cn("glass-panel p-6 rounded-3xl border border-white/5 bg-gradient-to-br to-transparent relative overflow-hidden group", k.bg)}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-white/5 rounded-2xl">
+                <k.icon size={20} className={k.color} />
+              </div>
+              <div className={cn("flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg bg-white/5", k.trendColor)}>
+                <TrendingUp size={10} /> {k.trend}
+              </div>
             </div>
-            <p className={cn("text-2xl font-black", k.color)}>{k.value}</p>
+            <div>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">{k.label}</p>
+              <p className={cn("text-3xl font-black", k.color)}>{k.value.toLocaleString()}</p>
+            </div>
+            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all"></div>
           </div>
         ))}
       </div>
 
       {/* ── Barre de contrôle ──────────────────────────────────── */}
-      <div className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        {/* Filtres */}
-        <div className="flex gap-2 flex-wrap">
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setCustomerStatusFilter(f.key)}
-              className={cn(
-                "px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2",
-                customerStatusFilter === f.key
-                  ? "bg-brand text-white shadow-lg shadow-brand/20"
-                  : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-              )}
+      <div className="glass-panel p-4 rounded-3xl border border-white/5 flex flex-col xl:flex-row gap-4 items-center justify-between">
+        <div className="flex gap-4 flex-wrap items-center">
+          {/* Filtres de statut */}
+          <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
+            {FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setCustomerStatusFilter(f.key)}
+                className={cn(
+                  "px-4 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all flex items-center gap-2",
+                  customerStatusFilter === f.key
+                    ? "bg-brand text-white shadow-lg shadow-brand/20"
+                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <f.icon size={12} />
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-8 w-px bg-white/10 hidden sm:block"></div>
+
+          {/* Filtre de Zone */}
+          <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-2xl border border-white/5">
+            <Filter size={12} className="text-gray-500" />
+            <select 
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value)}
+              className="bg-transparent text-[10px] font-black uppercase text-gray-300 focus:outline-none cursor-pointer"
             >
-              <f.icon size={12} />
-              {f.label}
-              <span className={cn("px-1.5 py-0.5 rounded-md text-[9px] font-black",
-                customerStatusFilter === f.key ? "bg-white/20 text-white" : "bg-white/5 text-gray-400"
-              )}>
-                {f.count}
-              </span>
-            </button>
-          ))}
+              <option value="all" className="bg-bg-dark">Toutes les Zones</option>
+              {regions.map(r => (
+                <option key={r.id} value={r.id} className="bg-bg-dark">{r.areaName}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Recherche + Ajouter */}
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-none">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <div className="flex gap-3 w-full xl:w-auto">
+          <div className="relative flex-1 xl:w-64 group">
+            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-brand transition-colors" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Nom, ID, email, type..."
-              className="input-field pl-8 py-2 text-sm w-full sm:w-56"
+              placeholder="NOM, ID, EMAIL..."
+              className="w-full bg-black/20 border border-white/10 rounded-2xl py-2.5 pl-11 pr-4 text-[10px] font-bold text-white focus:outline-none focus:border-brand/40 transition-all uppercase tracking-widest placeholder:text-gray-700"
             />
           </div>
           <button
             onClick={() => { setEditingCustomer(null); setIsCustomerModalOpen(true); }}
-            className="btn-primary px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold whitespace-nowrap"
+            className="group relative px-6 py-2.5 bg-brand shadow-[0_10px_30px_rgba(255,107,53,0.3)] hover:bg-brand-light rounded-2xl transition-all flex items-center gap-3 overflow-hidden"
           >
-            <Plus size={16} /> Nouveau Client
+            <Plus size={18} className="text-white relative z-10" />
+            <span className="text-[10px] font-black text-white uppercase tracking-widest relative z-10">Ajouter Abonné</span>
           </button>
         </div>
       </div>
@@ -287,133 +315,151 @@ export const CustomersSection = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
               <thead>
-                <tr className="bg-white/5 border-b border-white/5">
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Client</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Tarif NIGELEC</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Compteurs</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Crédit</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Statut</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                <tr className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                  <th className="px-6 py-4">Abonné</th>
+                  <th className="px-6 py-4">Contact</th>
+                  <th className="px-6 py-4">Type</th>
+                  <th className="px-6 py-4">Zone</th>
+                  <th className="px-6 py-4">Compteurs</th>
+                  <th className="px-6 py-4">Crédit</th>
+                  <th className="px-6 py-4">Statut</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="">
                 {filtered.map((customer, idx) => {
                   const customerMeters = getCustomerMeters(customer.id);
-                  const firstMeter    = customerMeters[0];
                   const totalCredit   = customerMeters.reduce((s, m) => s + (m.credit || 0), 0);
                   const hasLowCredit  = customerMeters.some(m => (m.credit || 0) < 5);
                   const hasTamper     = customerMeters.some(m => m.tamperStatus === 'tampered' || m.tamperStatus === 'detected');
                   const avatarColor   = AVATAR_COLORS[idx % AVATAR_COLORS.length];
 
                   return (
-                    <tr key={customer.id} className="hover:bg-white/[0.02] transition-colors group">
-                      {/* Client */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black shrink-0", avatarColor)}>
+                    <tr key={customer.id} className="group transition-all">
+                      {/* Abonné */}
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black shrink-0 shadow-lg", avatarColor)}>
                             {customer.name.charAt(0)}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-white group-hover:text-brand transition-colors text-sm">{customer.name}</p>
-                              {hasTamper && <span className="text-[7px] px-1 py-0.5 bg-red-500/20 text-red-400 rounded font-black uppercase">Tamper</span>}
+                              <p className="font-black text-white group-hover:text-brand transition-colors text-xs uppercase tracking-tight">{customer.name}</p>
+                              {hasTamper && (
+                                <span className="flex items-center gap-1 text-[7px] px-1.5 py-0.5 bg-red-600/20 text-red-500 border border-red-500/30 rounded font-black uppercase animate-pulse">
+                                  <AlertTriangle size={8} /> Tamper
+                                </span>
+                              )}
                             </div>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ID: {customer.id}</p>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">ID: {customer.id}</p>
                           </div>
                         </div>
                       </td>
 
                       {/* Contact */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-xs text-gray-300 font-mono">
-                            <Mail size={10} className="text-gray-500" />
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-[10px] text-gray-300 font-bold tracking-tight">
+                            <Mail size={11} className="text-brand/60" />
                             {maskEmail(customer.email)}
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-mono">
-                            <Phone size={10} className="text-gray-500" />
+                          <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold tracking-tight">
+                            <Phone size={11} className="text-brand/60" />
                             {maskPhone(customer.phone)}
                           </div>
                         </div>
                       </td>
 
-                      {/* Tarif */}
-                      <td className="px-6 py-4">
-                        <span className={cn("px-2.5 py-1 rounded-full text-[9px] font-black uppercase border", TYPE_COLORS[customer.type] || 'bg-white/10 text-gray-400 border-white/10')}>
+                      {/* Type */}
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <span className={cn("px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border", TYPE_COLORS[customer.type] || 'bg-white/10 text-gray-400 border-white/10')}>
                           {TYPE_LABELS[customer.type] || customer.type}
                         </span>
                       </td>
 
-                      {/* Compteurs */}
-                      <td className="px-6 py-4">
+                      {/* Zone */}
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                         <div className="flex items-center gap-2">
-                          <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black",
-                            customer.meters > 0 ? "bg-brand/10 text-brand" : "bg-white/5 text-gray-500"
+                          <MapPin size={12} className="text-gray-600" />
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            {regions.find(r => r.id === customer.regionId)?.areaName || '—'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Compteurs */}
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-black border shadow-inner",
+                            customerMeters.length > 0 ? "bg-brand/10 text-brand border-brand/20" : "bg-white/5 text-gray-500 border-white/10"
                           )}>
                             {customerMeters.length || customer.meters}
                           </div>
                           {customerMeters.some(m => m.status !== 'online') && (
-                            <span className="text-[8px] text-orange-400 font-black">⚠ Alerte</span>
+                            <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
                           )}
                         </div>
                       </td>
 
-                      {/* Crédit consolidé */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5">
-                          <CreditCard size={11} className={hasLowCredit ? "text-brand" : "text-gray-500"} />
-                          <span className={cn("text-sm font-black", hasLowCredit ? "text-brand" : "text-green-400")}>
-                            {totalCredit > 0 ? `${totalCredit.toFixed(1)} kWh` : '—'}
+                      {/* Crédit */}
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <div className="flex items-center gap-2">
+                          <CreditCard size={12} className={hasLowCredit ? "text-brand" : "text-gray-600"} />
+                          <span className={cn("text-xs font-black", hasLowCredit ? "text-brand animate-pulse" : "text-green-400")}>
+                            {totalCredit > 0 ? `${totalCredit.toLocaleString()} kWh` : '—'}
                           </span>
-                          {hasLowCredit && <span className="text-[8px] text-brand/70">(bas)</span>}
                         </div>
                       </td>
 
                       {/* Statut */}
-                      <td className="px-6 py-4">
-                        <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase border",
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                        <span className={cn("px-4 py-1.5 rounded-full text-[9px] font-black uppercase border flex items-center gap-2 w-fit",
                           STATUS_COLORS[customer.status] || 'bg-white/10 text-gray-400 border-white/10'
                         )}>
+                          <span className={cn("w-1.5 h-1.5 rounded-full", 
+                            customer.status === 'active' ? "bg-green-400 animate-pulse" : "bg-gray-400"
+                          )} />
                           {STATUS_LABELS[customer.status] || customer.status}
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setViewingCustomer(customer)}
-                            className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-all"
-                            title="Voir la fiche"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          {firstMeter && (
-                            <button
-                              onClick={() => { setViewingMeter(firstMeter); setCurrentSection('map'); }}
-                              className="p-2 bg-brand/10 hover:bg-brand text-brand hover:text-white rounded-lg transition-all"
-                              title="Localiser sur la carte"
-                            >
-                              <MapPin size={15} />
+                      <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl group-hover:bg-white/[0.05] transition-colors text-right">
+                        <div className="flex justify-end">
+                          <div className="relative group/menu">
+                            <button className="flex items-center gap-2 px-4 py-2 bg-brand/10 hover:bg-brand text-brand hover:text-white border border-brand/20 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg hover:shadow-brand/30">
+                              Actions <ChevronDown size={12} />
                             </button>
-                          )}
-                          <button
-                            onClick={() => { setEditingCustomer(customer); setIsCustomerModalOpen(true); }}
-                            className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-lg transition-all"
-                            title="Modifier"
-                          >
-                            <Edit size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCustomer(customer.id)}
-                            className="p-2 bg-red-500/5 hover:bg-red-500 text-red-500/50 hover:text-white rounded-lg transition-all"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                            
+                            {/* Dropdown Menu */}
+                            <div className="absolute right-0 mt-2 w-48 bg-bg-dark border border-white/10 rounded-2xl shadow-2xl opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible translate-y-2 group-hover/menu:translate-y-0 transition-all z-50 overflow-hidden">
+                              <button onClick={() => setViewingCustomer(customer)} className="w-full px-4 py-3 flex items-center gap-3 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all border-b border-white/5">
+                                <Eye size={14} className="text-brand" /> Voir la Fiche
+                              </button>
+                              <button onClick={() => { setCurrentSection('audit'); }} className="w-full px-4 py-3 flex items-center gap-3 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all border-b border-white/5">
+                                <Clock size={14} className="text-blue-400" /> Journal d'Audit
+                              </button>
+                              <button onClick={() => { setEditingCustomer(customer); setIsCustomerModalOpen(true); }} className="w-full px-4 py-3 flex items-center gap-3 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all border-b border-white/5">
+                                <Edit size={14} className="text-green-400" /> Modifier Infos
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  if (setMeterSearch) {
+                                    setMeterSearch(customer.id);
+                                  }
+                                  setCurrentSection('meters');
+                                }}
+                                className="w-full px-4 py-3 flex items-center gap-3 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all border-b border-white/5"
+                              >
+                                <Zap size={14} className="text-orange-400" /> Gérer Compteurs
+                              </button>
+                              <button onClick={() => handleDeleteCustomer(customer.id)} className="w-full px-4 py-3 flex items-center gap-3 text-[10px] font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all">
+                                <Trash2 size={14} /> Supprimer Compte
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </td>
                     </tr>

@@ -38,6 +38,14 @@ export const GeneratedTokenModal: React.FC<GeneratedTokenModalProps> = ({
             <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Énergie (kWh)</p>
             <p className="font-bold text-green-400">+{generatedToken.kwh?.toFixed(2) || 0} kWh</p>
           </div>
+          <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">TID (Token ID)</p>
+            <p className="font-mono text-xs font-bold text-blue-400">{generatedToken.tid || 'N/A'}</p>
+          </div>
+          <div className="p-4 bg-white/5 rounded-xl border border-white/5">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Norme STS</p>
+            <p className="text-[10px] font-bold text-gray-300">IEC 62055-41 (V2)</p>
+          </div>
         </div>
         
         <div className="flex flex-col gap-3">

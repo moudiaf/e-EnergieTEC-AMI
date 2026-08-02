@@ -53,6 +53,7 @@ interface BillingSectionProps {
   setIsPaymentModalOpen: (open: boolean) => void;
   handleGenerateInvoicePDF: (invoice: Invoice) => void;
   handleMassPayment: () => void;
+  billingProgress: number;
 }
 
 export const BillingSection = ({
@@ -64,7 +65,8 @@ export const BillingSection = ({
   setSelectedInvoice,
   setIsPaymentModalOpen,
   handleGenerateInvoicePDF,
-  handleMassPayment
+  handleMassPayment,
+  billingProgress
 }: BillingSectionProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'overdue'>('all');
@@ -79,9 +81,9 @@ export const BillingSection = ({
     return invoices.filter(inv => {
       const customer = customers.find(c => c.id === inv.customerId);
       const matchesSearch = 
-        inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        inv.meterId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        (inv.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (inv.meterId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = 
         statusFilter === 'all' || 
@@ -108,22 +110,44 @@ export const BillingSection = ({
         </div>
         
         {currentUser?.role === 'admin' && (
-          <div className="flex gap-4">
-            <button
-              onClick={handleMassPayment}
-              className="px-6 py-4 rounded-2xl flex items-center gap-3 bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest group"
-            >
-              <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-700" />
-              Réconciliation Masse
-            </button>
-            <button
-              onClick={handleRunBilling}
-              disabled={isBillingLoading}
-              className="btn-primary px-8 py-4 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl shadow-brand/30 disabled:opacity-50"
-            >
-              {isBillingLoading ? <RefreshCw className="animate-spin" size={18} /> : <FileText size={18} />}
-              Lancer Cycle Mensuel
-            </button>
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-4">
+              <button
+                onClick={handleMassPayment}
+                className="px-6 py-4 rounded-2xl flex items-center gap-3 bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest group"
+              >
+                <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-700" />
+                Réconciliation Masse
+              </button>
+              <button
+                onClick={handleRunBilling}
+                disabled={isBillingLoading}
+                className="btn-primary px-8 py-4 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl shadow-brand/30 disabled:opacity-50 relative overflow-hidden"
+              >
+                <AnimatePresence>
+                  {isBillingLoading && (
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${billingProgress}%` }}
+                      className="absolute inset-0 bg-white/20 z-0"
+                    />
+                  )}
+                </AnimatePresence>
+                <span className="relative z-10 flex items-center gap-3">
+                  {isBillingLoading ? <RefreshCw className="animate-spin" size={18} /> : <FileText size={18} />}
+                  {isBillingLoading ? `Calculs en cours (${billingProgress}%)...` : 'Lancer Cycle Mensuel'}
+                </span>
+              </button>
+            </div>
+            {isBillingLoading && (
+              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${billingProgress}%` }}
+                  className="h-full bg-gradient-to-r from-brand to-blue-500 shadow-[0_0_15px_rgba(var(--brand-rgb),0.5)]"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

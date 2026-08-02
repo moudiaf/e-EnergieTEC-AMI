@@ -16,6 +16,13 @@ L'application e-EnergieTEC Enterprise fonctionne désormais sur une infrastructu
 3.  Validez le **Captcha de sécurité** (Section 6 Compliance).
 4.  Une authentification **MFA (Multi-Factor Authentication)** est exigée pour les profils à hauts privilèges (Administrateurs & Auditeurs ARSE).
 
+### Navigation & Actions Rapides
+L'interface propose désormais un **Menu "Action" Unifié** dans les listes de clients et de compteurs. Ce menu permet d'accéder rapidement aux fonctions clés sans changer de page :
+*   **Fiche Client/Compteur** : Détails complets et historique.
+*   **Localisation** : Visualisation immédiate sur la carte GIS.
+*   **Journal d'Audit** : Historique des actions liées à cet objet.
+*   **Commandes à distance** : Coupure/Rétablissement ou mise à jour firmware.
+
 ---
 
 ## 2. Opérations de Vente (Module Vending STS)

@@ -12,6 +12,9 @@ interface TicketsWrapperProps {
     updateTicketStatus: (id: string, status: string) => void;
     ticketSearch: string;
     setTicketSearch: (query: string) => void;
+    meters?: any[];
+    setViewingMeter?: (meter: any) => void;
+    setCurrentSection?: (section: any) => void;
 }
 
 export const TicketsWrapper = ({
@@ -22,7 +25,10 @@ export const TicketsWrapper = ({
     setIsTicketModalOpen,
     updateTicketStatus,
     ticketSearch,
-    setTicketSearch
+    setTicketSearch,
+    meters,
+    setViewingMeter,
+    setCurrentSection
 }: TicketsWrapperProps) => {
     if (currentUser?.role === 'tech') {
         return (
@@ -31,6 +37,9 @@ export const TicketsWrapper = ({
                 notifications={notifications}
                 currentUser={currentUser}
                 updateTicketStatus={updateTicketStatus}
+                meters={meters}
+                setViewingMeter={setViewingMeter}
+                setCurrentSection={setCurrentSection}
             />
         );
     }

@@ -33,11 +33,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       <div className="max-h-96 overflow-y-auto space-y-4">
         {globalSearchQuery.length > 2 ? (
           <>
-            {customers.filter(c => c.name.toLowerCase().includes(globalSearchQuery.toLowerCase()) || c.id.includes(globalSearchQuery)).length > 0 && (
+            {customers.filter(c => (c.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (c.id || '').includes(globalSearchQuery)).length > 0 && (
               <div>
                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Clients</h4>
                 <div className="space-y-2">
-                  {customers.filter(c => c.name.toLowerCase().includes(globalSearchQuery.toLowerCase()) || c.id.includes(globalSearchQuery)).map(c => (
+                  {customers.filter(c => (c.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (c.id || '').includes(globalSearchQuery)).map(c => (
                     <div key={c.id} onClick={() => { setCurrentSection('customers'); onClose(); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors flex justify-between items-center">
                       <div>
                         <div className="font-bold text-white">{c.name}</div>
@@ -49,11 +49,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 </div>
               </div>
             )}
-            {meters.filter(m => m.id.includes(globalSearchQuery) || m.location.toLowerCase().includes(globalSearchQuery.toLowerCase())).length > 0 && (
+            {meters.filter(m => (m.id || '').includes(globalSearchQuery) || (m.location || '').toLowerCase().includes(globalSearchQuery.toLowerCase())).length > 0 && (
               <div>
                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 mt-4">Compteurs</h4>
                 <div className="space-y-2">
-                  {meters.filter(m => m.id.includes(globalSearchQuery) || m.location.toLowerCase().includes(globalSearchQuery.toLowerCase())).map(m => (
+                  {meters.filter(m => (m.id || '').includes(globalSearchQuery) || (m.location || '').toLowerCase().includes(globalSearchQuery.toLowerCase())).map(m => (
                     <div key={m.id} onClick={() => { setCurrentSection('meters'); onClose(); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors flex justify-between items-center">
                       <div>
                         <div className="font-bold text-white font-mono">{m.id}</div>
@@ -65,11 +65,11 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 </div>
               </div>
             )}
-            {tokens.filter(t => t.token.includes(globalSearchQuery) || t.meterId.includes(globalSearchQuery)).length > 0 && (
+            {tokens.filter(t => (t.token || '').includes(globalSearchQuery) || (t.meterId || '').includes(globalSearchQuery)).length > 0 && (
               <div>
                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 mt-4">Tokens</h4>
                 <div className="space-y-2">
-                  {tokens.filter(t => t.token.includes(globalSearchQuery) || t.meterId.includes(globalSearchQuery)).map(t => (
+                  {tokens.filter(t => (t.token || '').includes(globalSearchQuery) || (t.meterId || '').includes(globalSearchQuery)).map(t => (
                     <div key={t.id} onClick={() => { setCurrentSection('tokens'); onClose(); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors flex justify-between items-center">
                       <div>
                         <div className="font-bold text-brand font-mono">{t.token}</div>
@@ -81,9 +81,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 </div>
               </div>
             )}
-            {customers.filter(c => c.name.toLowerCase().includes(globalSearchQuery.toLowerCase()) || c.id.includes(globalSearchQuery)).length === 0 &&
-             meters.filter(m => m.id.includes(globalSearchQuery) || m.location.toLowerCase().includes(globalSearchQuery.toLowerCase())).length === 0 &&
-             tokens.filter(t => t.token.includes(globalSearchQuery) || t.meterId.includes(globalSearchQuery)).length === 0 && (
+            {customers.filter(c => (c.name || '').toLowerCase().includes(globalSearchQuery.toLowerCase()) || (c.id || '').includes(globalSearchQuery)).length === 0 &&
+             meters.filter(m => (m.id || '').includes(globalSearchQuery) || (m.location || '').toLowerCase().includes(globalSearchQuery.toLowerCase())).length === 0 &&
+             tokens.filter(t => (t.token || '').includes(globalSearchQuery) || (t.meterId || '').includes(globalSearchQuery)).length === 0 && (
               <div className="text-center text-gray-500 py-8">Aucun résultat trouvé</div>
             )}
           </>

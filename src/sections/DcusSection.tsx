@@ -22,6 +22,7 @@ interface DcusSectionProps {
     handleDeleteDcu: (id: string) => void;
     onRebootDcu?: (id: string) => void;
     onPingDcu?: (id: string) => void;
+    setCurrentSection?: (section: string) => void;
 }
 
 export const DcusSection = ({
@@ -30,7 +31,8 @@ export const DcusSection = ({
     setIsDcuModalOpen,
     handleDeleteDcu,
     onRebootDcu,
-    onPingDcu
+    onPingDcu,
+    setCurrentSection
 }: DcusSectionProps) => {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<'all' | 'active' | 'offline' | 'error'>('all');
@@ -288,7 +290,10 @@ export const DcusSection = ({
                             </div>
                             <p className="text-[10px] font-black text-white uppercase">Géolocalisation Active</p>
                             <p className="text-[9px] text-gray-500 font-bold uppercase mt-1 mb-6">Tous les DCU sont mappés sur le SIG</p>
-                            <button className="w-full py-3 bg-white/5 hover:bg-brand rounded-xl border border-white/5 text-[9px] font-black text-gray-400 hover:text-white transition-all uppercase tracking-[0.2em]">
+                            <button 
+                                onClick={() => setCurrentSection?.('map')}
+                                className="w-full py-3 bg-white/5 hover:bg-brand rounded-xl border border-white/5 text-[9px] font-black text-gray-400 hover:text-white transition-all uppercase tracking-[0.2em]"
+                            >
                                 Voir sur la Carte
                             </button>
                         </div>

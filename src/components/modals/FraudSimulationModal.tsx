@@ -17,8 +17,8 @@ export const FraudSimulationModal = ({ isOpen, onClose, meters, onTriggerSim }: 
   const [searchFilter, setSearchFilter] = useState('');
 
   const filteredMeters = meters.filter(m => 
-    m.id.toLowerCase().includes(searchFilter.toLowerCase()) || 
-    m.location.toLowerCase().includes(searchFilter.toLowerCase())
+    (m.id || '').toLowerCase().includes(searchFilter.toLowerCase()) || 
+    (m.location || '').toLowerCase().includes(searchFilter.toLowerCase())
   ).slice(0, 10); // Limit to avoid long lists
 
   return (

@@ -149,9 +149,12 @@ export const ReportsSection = ({
                </div>
             </div>
 
-            <button className="w-full group py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center gap-3 transition-all">
-              <Download size={16} className="text-gray-500 group-hover:text-brand" />
-              <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-white">Télécharger Certificat</span>
+            <button 
+              onClick={onGenerateSystemIntegrity}
+              className="w-full group py-4 bg-brand hover:bg-brand-light border border-brand/20 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-brand/20 active:scale-95 text-white"
+            >
+              <Download size={16} className="text-white group-hover:animate-bounce" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white">Télécharger Certificat</span>
             </button>
           </div>
         </div>

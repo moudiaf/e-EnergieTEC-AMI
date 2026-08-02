@@ -126,3 +126,61 @@ input, textarea {
   .print-only { position: absolute; left: 0; top: 0; width: 100vw; display: block !important; background: white !important; color: black !important; padding: 20px !important; margin: 0 !important; }
   .modal-overlay, .sidebar, .bottom-nav { display: none !important; }
 }
+
+/* Custom map animations */
+@keyframes network-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.animate-network-flow {
+  stroke-dasharray: 6 6;
+  animation: network-flow 1.5s linear infinite;
+}
+
+@keyframes map-pulse-green {
+  0%, 100% { 
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.4); 
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.8); 
+    transform: scale(1.15);
+  }
+}
+
+@keyframes map-pulse-orange {
+  0%, 100% { 
+    box-shadow: 0 0 4px rgba(249, 115, 22, 0.4); 
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 14px rgba(249, 115, 22, 0.8); 
+    transform: scale(1.15);
+  }
+}
+
+@keyframes map-pulse-red {
+  0%, 100% { 
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); 
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(239, 68, 68, 1); 
+    transform: scale(1.2);
+  }
+}
+
+.map-glow-green {
+  animation: map-pulse-green 2s infinite ease-in-out;
+}
+
+.map-glow-orange {
+  animation: map-pulse-orange 1.8s infinite ease-in-out;
+}
+
+.map-glow-red {
+  animation: map-pulse-red 1.2s infinite ease-in-out;
+}
+

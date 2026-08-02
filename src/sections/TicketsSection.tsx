@@ -37,13 +37,20 @@ export const TicketsSection = ({
   const isCustomer = currentUser?.role === 'customer';
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter(t => {
+    const safeTickets = Array.isArray(tickets) ? tickets : [];
+    return safeTickets.filter(t => {
+      if (isCustomer && currentUser?.associatedCustomerId) {
+        if (t.customerId !== currentUser.associatedCustomerId) {
+          return false;
+        }
+      }
+
       const query = ticketSearch.toLowerCase();
       const matchesSearch = 
-        t.subject.toLowerCase().includes(query) || 
-        t.description.toLowerCase().includes(query) || 
-        t.id.toLowerCase().includes(query) || 
-        t.meterId.toLowerCase().includes(query);
+        (t.subject || '').toLowerCase().includes(query) || 
+        (t.description || '').toLowerCase().includes(query) || 
+        (t.id || '').toLowerCase().includes(query) || 
+        (t.meterId || '').toLowerCase().includes(query);
       
       const matchesTab = 
         activeTab === 'all' || 
@@ -53,7 +60,7 @@ export const TicketsSection = ({
       
       return matchesSearch && matchesTab;
     });
-  }, [tickets, ticketSearch, activeTab]);
+  }, [tickets, ticketSearch, activeTab, isCustomer, currentUser]);
 
   const StatsCard = ({ title, count, icon: Icon, color, glow }: any) => (
     <div className="glass-panel p-6 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
@@ -203,21 +210,21 @@ export const TicketsSection = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-separate border-spacing-y-3 px-8 pb-8">
             <thead>
-              <tr className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] border-b border-white/5">
-                <th className="px-8 py-5">Référence Ticket</th>
-                <th className="px-8 py-5">Détail du Problème</th>
-                <th className="px-8 py-5">Niveau Priorité</th>
-                <th className="px-8 py-5">Statut Actuel</th>
-                <th className="px-8 py-5">Assignation</th>
-                <th className="px-8 py-5 text-right">Action</th>
+              <tr className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                <th className="px-4 py-4">Référence Ticket</th>
+                <th className="px-4 py-4">Détail du Problème</th>
+                <th className="px-4 py-4 text-center">Priorité</th>
+                <th className="px-4 py-4 text-center">Statut</th>
+                <th className="px-4 py-4">Assignation</th>
+                <th className="px-4 py-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="">
               {filteredTickets.map(ticket => (
-                <tr key={ticket.id} className="hover:bg-white/[0.02] transition-colors group">
-                  <td className="px-8 py-6">
+                <tr key={ticket.id} className="group transition-all">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-l border-white/5 rounded-l-2xl group-hover:bg-white/[0.05] transition-colors">
                     <div className="flex flex-col gap-1">
                       <p className="font-mono text-xs font-black text-brand tracking-widest">{ticket.id}</p>
                       <p className="text-[9px] text-gray-600 font-bold flex items-center gap-1 uppercase">
@@ -225,48 +232,56 @@ export const TicketsSection = ({
                       </p>
                     </div>
                   </td>
-                  <td className="px-8 py-6 max-w-sm">
-                    <p className="text-sm font-black text-white leading-tight mb-1 group-hover:text-brand transition-colors">{ticket.subject}</p>
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors max-w-sm">
+                    <p className="text-sm font-black text-white leading-tight mb-1 group-hover:text-brand transition-colors tracking-tight">{ticket.subject}</p>
+                    <p className="text-[10px] text-gray-400 line-clamp-1 mb-2 italic">« {ticket.description} »</p>
+
+
                     <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-[9px] text-gray-500 font-bold uppercase tracking-widest">
-                        <Zap size={10} className="text-brand" /> {ticket.meterId}
+                      <span className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded-lg text-[9px] text-gray-500 font-black uppercase tracking-widest border border-white/5">
+                        <Zap size={10} className="text-brand" /> {ticket.meterId || 'N/A'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
-                    <div className={cn(
-                      "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                      ticket.priority === 'Critique' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                      ticket.priority === 'Haute' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
-                      ticket.priority === 'Normale' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                    )}>
-                      <div className={cn("w-1.5 h-1.5 rounded-full", 
-                         ticket.priority === 'Critique' || ticket.priority === 'Haute' ? "bg-red-500 animate-pulse" : "bg-gray-400"
-                      )} />
-                      {ticket.priority}
+
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    <div className="flex justify-center">
+                      <div className={cn(
+                        "inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border",
+                        ticket.priority === 'Critique' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                        ticket.priority === 'Haute' ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                        ticket.priority === 'Normale' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-gray-500/10 text-gray-500 border-gray-500/20"
+                      )}>
+                        <div className={cn("w-1.5 h-1.5 rounded-full", 
+                           ticket.priority === 'Critique' || ticket.priority === 'Haute' ? "bg-red-500 animate-pulse" : "bg-gray-400"
+                        )} />
+                        {ticket.priority}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
-                    <div className={cn(
-                      "inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase border",
-                      ticket.status === 'Résolu' ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-white/5 text-gray-400 border-white/5 shadow-xl"
-                    )}>
-                      {ticket.status === 'Résolu' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                      {ticket.status}
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
+                    <div className="flex justify-center">
+                      <div className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[10px] font-black uppercase border",
+                        ticket.status === 'Résolu' ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-white/5 text-gray-400 border-white/10 shadow-xl"
+                      )}>
+                        {ticket.status === 'Résolu' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                        {ticket.status}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-white/5 group-hover:bg-white/[0.05] transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-500 ring-1 ring-white/10 group-hover:ring-brand/30 transition-all">
-                        <UserIcon size={14} />
+                      <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 ring-1 ring-white/10 group-hover:ring-brand/30 group-hover:bg-brand/5 transition-all">
+                        <UserIcon size={16} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-white leading-none mb-1">{ticket.assignedTo || 'Non assigné'}</p>
-                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Support Tech</p>
+                        <p className="text-[10px] font-black text-white leading-none mb-1">{ticket.assignedTo || 'Libre'}</p>
+                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Support Agent</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-right">
+                  <td className="px-6 py-5 bg-white/[0.03] border-y border-r border-white/5 rounded-r-2xl text-right group-hover:bg-white/[0.05] transition-colors">
                     <button 
                       onClick={() => { setEditingTicket(ticket); setIsTicketModalOpen(true); }} 
                       className="p-3 bg-white/5 border border-white/10 text-gray-500 hover:text-white rounded-2xl hover:bg-brand hover:border-brand transition-all group/btn shadow-lg"

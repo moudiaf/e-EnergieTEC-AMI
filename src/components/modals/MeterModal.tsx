@@ -1,4 +1,5 @@
 import React from 'react';
+import { Layers, Activity } from 'lucide-react';
 import { Modal } from '../Modal';
 import { Meter, Customer, Tariff } from '../../types';
 
@@ -8,6 +9,7 @@ interface MeterModalProps {
   editingMeter: Meter | null;
   customers: Customer[];
   tariffs: Tariff[];
+  meters: Meter[];
   handleSaveMeter: (e: React.FormEvent) => void;
 }
 
@@ -17,6 +19,7 @@ export const MeterModal: React.FC<MeterModalProps> = ({
   editingMeter,
   customers,
   tariffs,
+  meters,
   handleSaveMeter
 }) => (
   <Modal isOpen={isOpen} onClose={onClose} title={editingMeter ? "Modifier Compteur" : "Nouveau Compteur"}>
@@ -46,9 +49,18 @@ export const MeterModal: React.FC<MeterModalProps> = ({
           ))}
         </select>
       </div>
-      <div>
-        <label className="block text-xs text-gray-500 uppercase mb-2">Puissance Souscrite (kW)</label>
-        <input name="subscribedPower" type="number" step="0.1" defaultValue={editingMeter?.subscribedPower || 9.0} className="input-field w-full" required />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-gray-500 uppercase mb-2">Puissance Souscrite (kW)</label>
+          <input name="subscribedPower" type="number" step="0.1" defaultValue={editingMeter?.subscribedPower || 9.0} className="input-field w-full" required />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 uppercase mb-2">Type de Phase</label>
+          <select name="phaseType" defaultValue={editingMeter?.phaseType || 'monophase'} className="input-field w-full bg-transparent">
+            <option value="monophase" className="bg-bg-dark">Monophasé (1φ — 230V)</option>
+            <option value="triphase" className="bg-bg-dark">Triphasé (3φ — 400V)</option>
+          </select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -76,6 +88,45 @@ export const MeterModal: React.FC<MeterModalProps> = ({
         <div>
           <label className="block text-xs text-gray-500 uppercase mb-2">Longitude (E)</label>
           <input name="longitude" type="number" step="0.000001" defaultValue={editingMeter?.longitude || 2.125} className="input-field w-full font-mono" placeholder="Ex: 2.125" />
+        </div>
+      </div>
+
+      <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl space-y-3">
+        <h5 className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2">
+          <Layers size={12} /> Traçabilité Industrielle (Lots)
+        </h5>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-[10px] text-gray-500 uppercase mb-2 font-bold">Lot de Production / Arrivage</label>
+            <input 
+              name="batchId" 
+              list="existing-batches"
+              defaultValue={editingMeter?.batchId || 'BATCH-2026-NIG-01'} 
+              className="input-field w-full font-bold text-blue-400" 
+              placeholder="Ex: BATCH-2026-A" 
+            />
+            <datalist id="existing-batches">
+              {Array.from(new Set(meters.map(m => m.batchId).filter(Boolean))).map(b => (
+                <option key={b} value={b} />
+              ))}
+            </datalist>
+            {editingMeter?.batchId && (
+              <div className="mt-2 flex items-center gap-2 text-[9px] font-black text-blue-400/60 uppercase">
+                <Activity size={10} /> {meters.filter(m => m.batchId === editingMeter.batchId).length} compteurs dans ce lot
+              </div>
+            )}
+            <p className="text-[8px] text-gray-600 mt-1 italic">Indispensable pour le suivi SAV et garantie constructeur.</p>
+          </div>
+          <div>
+            <label className="block text-[10px] text-gray-500 uppercase mb-2 font-bold">Date d'Enregistrement NIGELEC</label>
+            <input 
+              name="registeredAt" 
+              type="date" 
+              defaultValue={editingMeter?.registeredAt ? editingMeter.registeredAt.split('T')[0] : new Date().toISOString().split('T')[0]} 
+              className="input-field w-full font-bold" 
+            />
+            <p className="text-[8px] text-gray-600 mt-1 italic">Date d'intégration officielle dans le système AMI.</p>
+          </div>
         </div>
       </div>
 
