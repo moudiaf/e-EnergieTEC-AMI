@@ -137,7 +137,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                       </button>
                       <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 font-mono pt-1">
                         <span className="uppercase text-[9px] font-bold text-gray-600">Comptes Démo :</span>
-                        <button type="button" onClick={() => { setLoginUsername('admin'); setLoginPassword('admin'); }} className="hover:text-brand underline cursor-pointer transition-colors" disabled={isLoading}>admin</button>
+                        <button type="button" onClick={() => { setLoginUsername('admin'); setLoginPassword('admin123'); }} className="hover:text-brand underline cursor-pointer transition-colors" disabled={isLoading}>admin</button>
                         <span>•</span>
                         <button type="button" onClick={() => { setLoginUsername('vendor'); setLoginPassword('vendor'); }} className="hover:text-brand underline cursor-pointer transition-colors" disabled={isLoading}>vendor</button>
                         <span>•</span>

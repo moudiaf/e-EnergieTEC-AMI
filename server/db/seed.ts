@@ -90,6 +90,10 @@ async function seed() {
   console.log("[SEED] Paiements insérés.");
 
   // 5. Utilisateurs de test
+  const hashedAdmin = bcrypt.hashSync('admin123', BCRYPT_ROUNDS);
+  await db.prepare("INSERT OR REPLACE INTO users (id, username, password, role, name, associatedCustomerId) VALUES (?, ?, ?, ?, ?, ?)")
+    .run('U001', 'admin', hashedAdmin, 'admin', 'Administrateur', null);
+
   const hashedJean = bcrypt.hashSync('password123', BCRYPT_ROUNDS);
   await db.prepare("INSERT OR IGNORE INTO users (id, username, password, role, name, associatedCustomerId) VALUES (?, ?, ?, ?, ?, ?)")
     .run('U004', 'jean', hashedJean, 'customer', 'Jean Dupont', 'C001');
@@ -98,7 +102,7 @@ async function seed() {
   await db.prepare("INSERT OR IGNORE INTO users (id, username, password, role, name, associatedCustomerId) VALUES (?, ?, ?, ?, ?, ?)")
     .run('U005', 'auditor', hashedAuditor, 'auditor', 'Auditeur ARSE', null);
 
-  console.log("[SEED] Utilisateurs 'jean' et 'auditor' insérés.");
+  console.log("[SEED] Utilisateurs 'admin' (admin123), 'jean' et 'auditor' insérés.");
 
   console.log("[SEED] Seeding terminé avec succès ! 🟢");
 }
