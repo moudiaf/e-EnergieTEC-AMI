@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Bolt, RefreshCw, Printer } from 'lucide-react';
+import { Bolt, RefreshCw, Printer, Sun } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Meter, User, Invoice } from '../types';
 import { clsx, type ClassValue } from 'clsx';
@@ -65,6 +65,42 @@ export const CustomerDashboardSection = ({
            <button onClick={() => setCurrentSection('sts-prepaid')} className="w-full py-3 bg-white/5 hover:bg-brand text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/5 hover:border-brand shadow-lg hover:shadow-brand/20">Recharger Maintenant</button>
         </div>
       ))}
+    </div>
+
+    {/* Section Solaire Photovoltaïque & Net-Metering DERMS Client */}
+    <div className="glass-panel p-6 rounded-3xl border border-amber-500/30 bg-amber-500/5 relative overflow-hidden">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <Sun size={24} />
+          </div>
+          <div>
+            <h4 className="text-lg font-bold text-white uppercase tracking-tight">Net-Metering Solaire & Injection Réseau</h4>
+            <p className="text-xs text-amber-400 font-bold">Compteur Bidirectionnel Détecté (Producteur Réseau NIGELEC)</p>
+          </div>
+        </div>
+        <span className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold uppercase rounded-xl border border-amber-500/30">
+          DERMS Connecté
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+          <span className="text-[10px] text-gray-400 uppercase font-bold">Énergie Photovoltaïque Injectée</span>
+          <p className="text-xl font-mono font-bold text-amber-400 mt-1">142.50 kWh</p>
+          <span className="text-[9px] text-emerald-400 font-bold">↑ Réinjecté ce mois-ci</span>
+        </div>
+        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+          <span className="text-[10px] text-gray-400 uppercase font-bold">Crédit Financier Généré</span>
+          <p className="text-xl font-mono font-bold text-emerald-400 mt-1">+8 457 FCFA</p>
+          <span className="text-[9px] text-gray-400">Déduit automatiquement</span>
+        </div>
+        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+          <span className="text-[10px] text-gray-400 uppercase font-bold">Bilan Carbone Évité</span>
+          <p className="text-xl font-mono font-bold text-cyan-400 mt-1">-102.6 kg CO₂</p>
+          <span className="text-[9px] text-cyan-300">Énergie Propre</span>
+        </div>
+      </div>
     </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

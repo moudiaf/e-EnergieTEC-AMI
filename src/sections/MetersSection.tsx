@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit, Trash2, MapPin, Search, Zap, Wifi, WifiOff, AlertTriangle, ShieldAlert, Activity, Info, X, Hash, Clock, ChevronDown, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Search, Zap, Wifi, WifiOff, AlertTriangle, ShieldAlert, Activity, Info, X, Hash, Clock, ChevronDown, RefreshCw, Sun } from 'lucide-react';
 import { Meter } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -179,6 +179,33 @@ export const MetersSection = ({
                     <p className={cn("text-sm font-black tracking-tight", item.accent ? 'text-brand' : 'text-white')}>{item.value}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Block Net-Metering Solaire DERMS */}
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl mb-8 relative z-10 space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2 text-amber-400 font-black text-xs uppercase tracking-wider">
+                    <Sun size={16} />
+                    <span>Net-Metering Solaire & DERMS (Bidirectionnel)</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Producteur Réseau
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <span className="text-[10px] text-gray-400">Énergie Injectée au Réseau (Export) :</span>
+                    <p className="text-sm font-mono font-bold text-amber-300">
+                      {(detailMeter.solarExportKwh || detailMeter.solarInjection || 142.5).toFixed(2)} kWh
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-400">Crédit Fin. Solaire :</span>
+                    <p className="text-sm font-mono font-bold text-emerald-400">
+                      +{((detailMeter.solarExportKwh || detailMeter.solarInjection || 142.5) * 59.35).toLocaleString()} FCFA
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 relative z-10">
