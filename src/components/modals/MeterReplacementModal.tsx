@@ -91,7 +91,7 @@ export const MeterReplacementModal: React.FC<MeterReplacementModalProps> = ({
                 <option value="">-- Choisir le compteur installé --</option>
                 {installedMeters.map(m => (
                   <option key={m.id} value={m.id}>
-                    {m.id} - Solde: {m.credit.toFixed(2)} kWh - ({m.location})
+                    {m.id} - Solde: {(m.credit ?? 0).toFixed(2)} kWh - ({m.location})
                   </option>
                 ))}
               </select>
@@ -105,7 +105,7 @@ export const MeterReplacementModal: React.FC<MeterReplacementModalProps> = ({
                 </div>
                 <div className="flex justify-between text-gray-300">
                   <span>Crédit Restant à Transférer :</span>
-                  <strong className="text-brand font-mono text-sm">{selectedOldMeter.credit.toFixed(2)} kWh</strong>
+                  <strong className="text-brand font-mono text-sm">{(selectedOldMeter?.credit ?? 0).toFixed(2)} kWh</strong>
                 </div>
               </div>
             )}
@@ -152,7 +152,7 @@ export const MeterReplacementModal: React.FC<MeterReplacementModalProps> = ({
                 <span>Confirmation du Remplacement</span>
               </div>
               <p className="text-xs text-gray-300">
-                Vous êtes sur le point de déposer le compteur <strong className="font-mono text-white">{oldMeterId}</strong> et de transférer <strong className="text-brand font-bold">{selectedOldMeter?.credit.toFixed(2)} kWh</strong> vers le compteur <strong className="font-mono text-white">{newMeterId}</strong>.
+                Vous êtes sur le point de déposer le compteur <strong className="font-mono text-white">{oldMeterId}</strong> et de transférer <strong className="text-brand font-bold">{(selectedOldMeter?.credit ?? 0).toFixed(2)} kWh</strong> vers le compteur <strong className="font-mono text-white">{newMeterId}</strong>.
               </p>
             </div>
 
@@ -171,7 +171,7 @@ export const MeterReplacementModal: React.FC<MeterReplacementModalProps> = ({
               </div>
               <div className="flex justify-between border-t border-white/10 pt-2">
                 <span className="text-gray-400">Solde Transféré :</span>
-                <span className="text-brand font-mono font-bold text-sm">{selectedOldMeter?.credit.toFixed(2)} kWh</span>
+                <span className="text-brand font-mono font-bold text-sm">{(selectedOldMeter?.credit ?? 0).toFixed(2)} kWh</span>
               </div>
             </div>
 
@@ -207,7 +207,7 @@ export const MeterReplacementModal: React.FC<MeterReplacementModalProps> = ({
               <div className="p-4 bg-brand/10 border border-brand/30 rounded-xl space-y-1">
                 <div className="text-xs text-brand font-bold uppercase tracking-wider">Token STS de Transfert de Crédit (20 Digits)</div>
                 <div className="font-mono font-black text-xl text-white tracking-widest">{resultData.transferToken}</div>
-                <div className="text-[10px] text-gray-400">Montant transféré : {resultData.creditTransferred?.toFixed(2)} kWh</div>
+                <div className="text-[10px] text-gray-400">Montant transféré : {(resultData.creditTransferred ?? 0).toFixed(2)} kWh</div>
               </div>
             )}
 
