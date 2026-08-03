@@ -19,24 +19,34 @@ Toutes les interfaces sont soumises à une limitation de débit stricte :
 
 ## 📡 Endpoints du Système
 
-### A. Gestion des Compteurs (Meters)
-Interface permettant la supervision de l'état des compteurs.
+### A. Authentification & Sécurité (Auth)
+Interface de gestion des sessions et récupération d'accès.
+
+| Méthode | Endpoint | Description | Sécurité |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/login` | Authentification utilisateur & émission token JWT | Public (Rate Limit 5/min) |
+| `POST` | `/api/forgot-password` | Réinitialisation sécurisée du mot de passe en 2 étapes | Public (Rate Limit 3/min) |
+
+### B. Gestion des Compteurs & Remplacement (Meters & Roll-out)
+Interface de supervision du parc et remplacement d'urgence.
 
 | Méthode | Endpoint | Description | Rôle Requis |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/meters` | Liste exhaustive des compteurs | Administrateur, Opérateur |
 | `POST` | `/api/meters` | Provisionnement d'un nouveau compteur | Superviseur |
 | `GET` | `/api/meters/:id` | État temps réel et configuration d'un compteur | Opérateur |
+| `POST` | `/api/meters/replace` | Dépose compteur défectueux & transfert solde Token STS 20-digits | Technicien, Admin |
 
-### B. Prépaiement STS (Vending)
-Interface critique pour la génération des jetons de crédit.
+### C. Prépaiement STS & Commande Réseau (Vending & Load Shedding)
+Interface critique pour la génération des jetons et pilotage du réseau.
 
 | Méthode | Endpoint | Description | Sécurité |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/tokens` | Génère un jeton STS conforme (TID, Anti-Rejou) | Signature HSM + Rate Limit |
+| `POST` | `/api/tokens` | Génère un jeton STS conforme (20-digits, TID, Anti-Rejou) | Signature HSM + Rate Limit |
 | `GET` | `/api/tokens` | Historique des jetons émis pour un compteur | Audit Log obligatoire |
+| `POST` | `/api/load-shedding` | Exécution d'un plan de délestage / réarmement relais DLMS | Administrateur, Grid Dispatcher |
 
-### C. Head End System (HES) - Collecte
+### D. Head End System (HES) - Collecte
 Interface dédiée à la remontée des trames DLMS/COSEM.
 
 | Méthode | Endpoint | Description | Protocole |
