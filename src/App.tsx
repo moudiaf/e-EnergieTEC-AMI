@@ -28,6 +28,7 @@ import { ShiftModal } from './components/modals/ShiftModal';
 import { FraudSimulationModal } from './components/modals/FraudSimulationModal';
 import { ForgotPasswordModal } from './components/modals/ForgotPasswordModal';
 import { MeterReplacementModal } from './components/modals/MeterReplacementModal';
+import { LoadSheddingModal } from './components/modals/LoadSheddingModal';
 
 import { Sidebar } from './components/Sidebar';
 import { TariffsSection } from './sections/TariffsSection';
@@ -92,6 +93,7 @@ function MainAppContent() {
     isUserModalOpen, setIsUserModalOpen,
     isForgotPasswordModalOpen, setIsForgotPasswordModalOpen,
     isReplacementModalOpen, setIsReplacementModalOpen,
+    isLoadSheddingModalOpen, setIsLoadSheddingModalOpen,
     isShiftModalOpen, setIsShiftModalOpen,
     currentShift, pastShifts,
     isTicketModalOpen, setIsTicketModalOpen,
@@ -120,6 +122,7 @@ function MainAppContent() {
     handleLogin,
     handleResetPassword,
     handleReplaceMeter,
+    handleExecuteLoadShedding,
     handleLogout,
     handleSaveCustomer,
     handleDeleteCustomer,
@@ -512,6 +515,7 @@ function MainAppContent() {
                       dcus={dcus}
                       setEditingDcu={setEditingDcu}
                       setIsDcuModalOpen={setIsDcuModalOpen}
+                      onOpenLoadSheddingModal={() => setIsLoadSheddingModalOpen(true)}
                       handleDeleteDcu={handleDeleteDcu}
                       onPingDcu={(id) => {
                         addToast(`🏓 Ping DCU ${id} — Réponse OK (latence: ${Math.floor(50 + Math.random() * 150)}ms)`, 'success');
@@ -715,6 +719,14 @@ function MainAppContent() {
         meters={meters}
         customers={customers}
         onConfirmReplacement={handleReplaceMeter}
+      />
+
+      <LoadSheddingModal
+        isOpen={isLoadSheddingModalOpen}
+        onClose={() => setIsLoadSheddingModalOpen(false)}
+        dcus={dcus}
+        regions={regions}
+        onExecuteLoadShedding={handleExecuteLoadShedding}
       />
 
       <ToastContainer toasts={toasts} />

@@ -19,6 +19,7 @@ interface DcusSectionProps {
     dcus: DCU[];
     setEditingDcu: (dcu: DCU | null) => void;
     setIsDcuModalOpen: (open: boolean) => void;
+    onOpenLoadSheddingModal?: () => void;
     handleDeleteDcu: (id: string) => void;
     onRebootDcu?: (id: string) => void;
     onPingDcu?: (id: string) => void;
@@ -29,6 +30,7 @@ export const DcusSection = ({
     dcus,
     setEditingDcu,
     setIsDcuModalOpen,
+    onOpenLoadSheddingModal,
     handleDeleteDcu,
     onRebootDcu,
     onPingDcu,
@@ -76,12 +78,13 @@ export const DcusSection = ({
                 <div className="flex gap-4">
                     <button
                         onClick={() => {
-                            const confirmed = window.confirm("ATTENTION : Souhaitez-vous vraiment déclencher un plan de délestage préventif sur le réseau sélectionné ? Les relais de coupure seront activés.");
-                            if (confirmed) {
-                                alert("Plan de délestage exécuté avec succès ! Ordres d'ouverture de relais transmis aux concentrateurs DCU.");
+                            if (onOpenLoadSheddingModal) {
+                                onOpenLoadSheddingModal();
+                            } else {
+                                alert("Module de délestage activé.");
                             }
                         }}
-                        className="group relative px-5 py-3 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 rounded-2xl transition-all flex items-center gap-3"
+                        className="group relative px-5 py-3 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 rounded-2xl transition-all flex items-center gap-3 cursor-pointer shadow-lg shadow-amber-500/10"
                     >
                         <Power size={18} className="text-amber-400" />
                         <div className="text-left">

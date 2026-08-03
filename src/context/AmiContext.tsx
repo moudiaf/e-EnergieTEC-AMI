@@ -180,6 +180,8 @@ interface AmiContextType {
   setIsForgotPasswordModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isReplacementModalOpen: boolean;
   setIsReplacementModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isLoadSheddingModalOpen: boolean;
+  setIsLoadSheddingModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
   navItems: Array<{ id: string; name: string; icon: any; hasBadge?: boolean }>;
 
@@ -188,6 +190,7 @@ interface AmiContextType {
   handleLogin: (e: React.FormEvent) => Promise<void>;
   handleResetPassword: (identifier: string, newPassword?: string) => Promise<boolean>;
   handleReplaceMeter: (oldMeterId: string, newMeterId: string) => Promise<{ success: boolean; transferToken?: string; creditTransferred?: number }>;
+  handleExecuteLoadShedding: (targetRegion: string, dcuIds: string[], durationHours: number, actionType: 'shed' | 'restore') => Promise<void>;
   handleLogout: () => Promise<void>;
   logAudit: (action: string, details: string, referenceId?: string) => Promise<void>;
   sendSmsNotification: (phone: string, message: string, priority?: 'urgent' | 'info') => void;
@@ -264,6 +267,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
   const [isReplacementModalOpen, setIsReplacementModalOpen] = useState(false);
+  const [isLoadSheddingModalOpen, setIsLoadSheddingModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [pastShifts, setPastShifts] = useState<Shift[]>([]);
@@ -605,6 +609,32 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err: any) {
       addToast('Erreur lors du remplacement du compteur', 'error');
       return { success: false };
+    }
+  };
+
+  const handleExecuteLoadShedding = async (targetRegion: string, dcuIds: string[], durationHours: number, actionType: 'shed' | 'restore') => {
+    try {
+      const isShedding = actionType === 'shed';
+      const actionLabel = isShedding ? 'Délestage Réseau' : 'Rétablissement Alimentation';
+
+      setDcus(prev => prev.map(d => {
+        if (targetRegion === 'ALL' || dcuIds.includes(d.id) || d.location?.toUpperCase().includes(targetRegion)) {
+          return { ...d, status: isShedding ? 'offline' : 'active' };
+        }
+        return d;
+      }));
+
+      setMeters(prev => prev.map(m => {
+        if (targetRegion === 'ALL' || m.location.toUpperCase().includes(targetRegion)) {
+          return { ...m, status: isShedding ? 'offline' : 'online' };
+        }
+        return m;
+      }));
+
+      addToast(`⚡ [LOAD SHEDDING] ${actionLabel} exécuté sur la zone ${targetRegion} (${durationHours}h)`, isShedding ? 'warning' : 'success');
+      logAudit('LOAD_SHEDDING_EXECUTE', `Action: ${actionLabel} | Zone: ${targetRegion} | Durée: ${durationHours}h | DCUs impactés: ${dcuIds.length}`);
+    } catch (err) {
+      addToast('Erreur lors du délestage', 'error');
     }
   };
 
@@ -1430,6 +1460,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isUserModalOpen, setIsUserModalOpen,
       isForgotPasswordModalOpen, setIsForgotPasswordModalOpen,
       isReplacementModalOpen, setIsReplacementModalOpen,
+      isLoadSheddingModalOpen, setIsLoadSheddingModalOpen,
       isShiftModalOpen, setIsShiftModalOpen,
       currentShift, setCurrentShift,
       pastShifts, setPastShifts,
@@ -1470,6 +1501,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       handleLogin,
       handleResetPassword,
       handleReplaceMeter,
+      handleExecuteLoadShedding,
       handleLogout,
       logAudit,
       sendSmsNotification,
