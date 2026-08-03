@@ -27,6 +27,7 @@ import { GeneratedTokenModal } from './components/modals/GeneratedTokenModal';
 import { ShiftModal } from './components/modals/ShiftModal';
 import { FraudSimulationModal } from './components/modals/FraudSimulationModal';
 import { ForgotPasswordModal } from './components/modals/ForgotPasswordModal';
+import { MeterReplacementModal } from './components/modals/MeterReplacementModal';
 
 import { Sidebar } from './components/Sidebar';
 import { TariffsSection } from './sections/TariffsSection';
@@ -90,6 +91,7 @@ function MainAppContent() {
     isDcuModalOpen, setIsDcuModalOpen,
     isUserModalOpen, setIsUserModalOpen,
     isForgotPasswordModalOpen, setIsForgotPasswordModalOpen,
+    isReplacementModalOpen, setIsReplacementModalOpen,
     isShiftModalOpen, setIsShiftModalOpen,
     currentShift, pastShifts,
     isTicketModalOpen, setIsTicketModalOpen,
@@ -117,6 +119,7 @@ function MainAppContent() {
     generateCaptcha,
     handleLogin,
     handleResetPassword,
+    handleReplaceMeter,
     handleLogout,
     handleSaveCustomer,
     handleDeleteCustomer,
@@ -360,6 +363,7 @@ function MainAppContent() {
                       setViewingMeter={setViewingMeter}
                       setEditingMeter={setEditingMeter}
                       setIsMeterModalOpen={setIsMeterModalOpen}
+                      setIsReplacementModalOpen={setIsReplacementModalOpen}
                       handleDeleteMeter={handleDeleteMeter}
                       setCurrentSection={setCurrentSection}
                       search={meterSearch}
@@ -703,6 +707,14 @@ function MainAppContent() {
         isOpen={isForgotPasswordModalOpen}
         onClose={() => setIsForgotPasswordModalOpen(false)}
         handleResetPassword={handleResetPassword}
+      />
+
+      <MeterReplacementModal
+        isOpen={isReplacementModalOpen}
+        onClose={() => setIsReplacementModalOpen(false)}
+        meters={meters}
+        customers={customers}
+        onConfirmReplacement={handleReplaceMeter}
       />
 
       <ToastContainer toasts={toasts} />

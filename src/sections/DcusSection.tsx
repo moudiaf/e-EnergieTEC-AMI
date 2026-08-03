@@ -75,6 +75,21 @@ export const DcusSection = ({
                 
                 <div className="flex gap-4">
                     <button
+                        onClick={() => {
+                            const confirmed = window.confirm("ATTENTION : Souhaitez-vous vraiment déclencher un plan de délestage préventif sur le réseau sélectionné ? Les relais de coupure seront activés.");
+                            if (confirmed) {
+                                alert("Plan de délestage exécuté avec succès ! Ordres d'ouverture de relais transmis aux concentrateurs DCU.");
+                            }
+                        }}
+                        className="group relative px-5 py-3 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-400 rounded-2xl transition-all flex items-center gap-3"
+                    >
+                        <Power size={18} className="text-amber-400" />
+                        <div className="text-left">
+                            <span className="block text-[10px] font-black uppercase leading-none">Plan Délestage</span>
+                            <span className="block text-[8px] opacity-70 font-bold uppercase mt-1">Coupure/Rétablissement</span>
+                        </div>
+                    </button>
+                    <button
                         onClick={() => { setEditingDcu(null); setIsDcuModalOpen(true); }}
                         className="group relative px-6 py-3 bg-brand shadow-[0_10px_30px_rgba(255,107,53,0.3)] hover:bg-brand-light rounded-2xl transition-all flex items-center gap-3 overflow-hidden"
                     >

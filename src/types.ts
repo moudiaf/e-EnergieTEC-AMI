@@ -52,6 +52,8 @@ export interface Meter {
   warehouseLocation?: string;
   touEnabled?: boolean;
   solarInjection?: number; // kWh injected into grid
+  isSolarEnabled?: boolean; // Net-Metering solar feed-in enabled
+  solarExportKwh?: number; // Total solar export kWh
   mlFraudScore?: number; // 0-1 score from ML model
   latitude?: number;
   longitude?: number;

@@ -45,6 +45,7 @@ interface MetersSectionProps {
   setViewingMeter: (m: Meter | null) => void;
   setEditingMeter: (m: Meter | null) => void;
   setIsMeterModalOpen: (open: boolean) => void;
+  setIsReplacementModalOpen?: (open: boolean) => void;
   handleDeleteMeter: (id: string) => void;
   setCurrentSection: (section: string) => void;
   search?: string;
@@ -56,6 +57,7 @@ export const MetersSection = ({
   setViewingMeter,
   setEditingMeter,
   setIsMeterModalOpen,
+  setIsReplacementModalOpen,
   handleDeleteMeter,
   setCurrentSection,
   search,
@@ -289,6 +291,14 @@ export const MetersSection = ({
               className="input-field pl-8 py-2 text-sm w-full sm:w-52"
             />
           </div>
+          {setIsReplacementModalOpen && (
+            <button 
+              onClick={() => setIsReplacementModalOpen(true)}
+              className="btn-secondary px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold whitespace-nowrap text-amber-400 border-amber-500/20 hover:bg-amber-500/10"
+            >
+              <RefreshCw size={14} /> Remplacer Compteur
+            </button>
+          )}
           <button onClick={() => { setEditingMeter(null); setIsMeterModalOpen(true); }}
             className="btn-primary px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold whitespace-nowrap">
             <Plus size={16} /> Nouveau

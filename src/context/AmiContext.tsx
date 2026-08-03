@@ -178,6 +178,8 @@ interface AmiContextType {
 
   isForgotPasswordModalOpen: boolean;
   setIsForgotPasswordModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isReplacementModalOpen: boolean;
+  setIsReplacementModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 
   navItems: Array<{ id: string; name: string; icon: any; hasBadge?: boolean }>;
 
@@ -185,6 +187,7 @@ interface AmiContextType {
   generateCaptcha: () => void;
   handleLogin: (e: React.FormEvent) => Promise<void>;
   handleResetPassword: (identifier: string, newPassword?: string) => Promise<boolean>;
+  handleReplaceMeter: (oldMeterId: string, newMeterId: string) => Promise<{ success: boolean; transferToken?: string; creditTransferred?: number }>;
   handleLogout: () => Promise<void>;
   logAudit: (action: string, details: string, referenceId?: string) => Promise<void>;
   sendSmsNotification: (phone: string, message: string, priority?: 'urgent' | 'info') => void;
@@ -260,6 +263,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDcuModalOpen, setIsDcuModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [isReplacementModalOpen, setIsReplacementModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [pastShifts, setPastShifts] = useState<Shift[]>([]);
@@ -573,6 +577,34 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       addToast('Utilisateur non trouvé', 'error');
       return false;
+    }
+  };
+
+  const handleReplaceMeter = async (oldMeterId: string, newMeterId: string): Promise<{ success: boolean; transferToken?: string; creditTransferred?: number }> => {
+    try {
+      const oldMeter = meters.find(m => m.id === oldMeterId);
+      const creditToTransfer = oldMeter ? oldMeter.credit : 0;
+      const customerId = oldMeter ? oldMeter.customerId : '';
+
+      const randomToken = `TOK-TRF-${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+      setMeters(prev => prev.map(m => {
+        if (m.id === oldMeterId) {
+          return { ...m, credit: 0, status: 'offline', lifecycleStatus: 'decommissioned' };
+        }
+        if (m.id === newMeterId) {
+          return { ...m, customerId, credit: creditToTransfer, status: 'online', lifecycleStatus: 'installed' };
+        }
+        return m;
+      }));
+
+      addToast(`Remplacement effectué ! Solde de ${creditToTransfer.toFixed(2)} kWh transféré vers ${newMeterId}`, 'success');
+      logAudit('METER_REPLACEMENT', `Remplacement compteur ${oldMeterId} -> ${newMeterId} avec transfert solde ${creditToTransfer.toFixed(2)} kWh`, newMeterId);
+
+      return { success: true, transferToken: randomToken, creditTransferred: creditToTransfer };
+    } catch (err: any) {
+      addToast('Erreur lors du remplacement du compteur', 'error');
+      return { success: false };
     }
   };
 
@@ -1397,6 +1429,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDcuModalOpen, setIsDcuModalOpen,
       isUserModalOpen, setIsUserModalOpen,
       isForgotPasswordModalOpen, setIsForgotPasswordModalOpen,
+      isReplacementModalOpen, setIsReplacementModalOpen,
       isShiftModalOpen, setIsShiftModalOpen,
       currentShift, setCurrentShift,
       pastShifts, setPastShifts,
@@ -1436,6 +1469,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       generateCaptcha,
       handleLogin,
       handleResetPassword,
+      handleReplaceMeter,
       handleLogout,
       logAudit,
       sendSmsNotification,
