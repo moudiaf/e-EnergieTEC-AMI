@@ -586,7 +586,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const creditToTransfer = oldMeter ? oldMeter.credit : 0;
       const customerId = oldMeter ? oldMeter.customerId : '';
 
-      const randomToken = `TOK-TRF-${Math.floor(10000000 + Math.random() * 90000000)}`;
+      const randomToken = Array.from({ length: 5 }, () => Math.floor(1000 + Math.random() * 9000)).join('-');
 
       setMeters(prev => prev.map(m => {
         if (m.id === oldMeterId) {
