@@ -5,17 +5,16 @@
   "description": "Full-Stack AMI, Smart Prepayment STS (IEC 62055-41), MDMS & Grid Management Platform",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "tsx server.ts",
-    "server": "tsx server.ts",
-    "backend": "tsx server.ts",
-    "build": "vite build",
-    "build:frontend": "vite build",
-    "build:backend": "tsc --project tsconfig.json --noEmit",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit",
-    "seed": "tsx server/db/seed.ts",
-    "test": "tsx server/tests/run-tests.ts"
+    "dev": "tsx dev.ts",
+    "start": "tsx dev.ts",
+    "dev:backend": "cd backend && npx tsx server.ts",
+    "dev:frontend": "cd frontend && npx vite",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:frontend": "cd frontend && npx tsc --noEmit && npx vite build",
+    "build:backend": "cd backend && npx tsc --noEmit",
+    "seed": "cd backend && npx tsx server/db/seed.ts",
+    "test": "cd backend && npx tsx server/tests/run-tests.ts",
+    "lint": "cd backend && npx tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

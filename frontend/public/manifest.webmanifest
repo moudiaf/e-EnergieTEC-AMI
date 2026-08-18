@@ -1,0 +1,17 @@
+{
+    "name": "e-EnergieTEC Smart Metering",
+    "short_name": "e-EnergieTEC",
+    "description": "Portail MDMS/STS pour la Nigelec - Smart Metering NI-2026",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0a0b",
+    "theme_color": "#FF6B35",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/3067/3067451.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
