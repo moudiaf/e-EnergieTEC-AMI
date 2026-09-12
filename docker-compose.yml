@@ -2,14 +2,17 @@ version: '3.8'
 
 services:
   # -------------------------------------------------------------
-  # 1. API Backend (MDMS Core)
+  # 1. API Backend (MDMS Core & STS Server - Port 5000)
   # -------------------------------------------------------------
-  ami-mdms-api:
-    build: .
-    container_name: nigelec-mdms-api
+  ami-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nigelec-ami-backend
     ports:
-      - "3000:3000"
+      - "5000:5000"
     environment:
+      - PORT=5000
       - NODE_ENV=production
       - DB_TYPE=postgres
       - DB_HOST=timescaledb
@@ -23,6 +26,22 @@ services:
       - timescaledb
       - kafka
       - redis-cache
+    restart: always
+    networks:
+      - ami-network
+
+  # -------------------------------------------------------------
+  # 2. Frontend PWA & Web Dashboard (Nginx - Port 3000)
+  # -------------------------------------------------------------
+  ami-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nigelec-ami-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ami-backend
     restart: always
     networks:
       - ami-network

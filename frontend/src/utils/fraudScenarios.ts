@@ -1,0 +1,23 @@
+export const FRAUD_SCENARIOS = [
+  { id: 'BYPASS_N', name: 'Bypass Neutre', priority: 'Critique', message: 'Dérivation du courant sur le neutre détectée.' },
+  { id: 'BYPASS_P', name: 'Bypass Phase', priority: 'Critique', message: 'Pontage partiel ou total de la phase pour contourner le comptage.' },
+  { id: 'INV_PHASE', name: 'Inversion Phase/Neutre', priority: 'Critique', message: 'Câblage inversé détecté à l\'entrée du compteur.' },
+  { id: 'MAG_INFL', name: 'Influence Magnétique', priority: 'Haute', message: 'Fait de placer un aimant puissant pour freiner le relais ou le noyau.' },
+  { id: 'TERM_OPEN', name: 'Ouverture Cache-Bornes', priority: 'Haute', message: 'Tentative d\'accès aux bornes de raccordement.' },
+  { id: 'COV_OPEN', name: 'Ouverture Capot', priority: 'Critique', message: 'Effraction physique du boîtier du compteur.' },
+  { id: 'CURR_UNBAL', name: 'Déséquilibre Courant', priority: 'Moyenne', message: 'Écart anormal entre le courant entrant et sortant.' },
+  { id: 'VOLT_ABS', name: 'Absence Tension (U=0)', priority: 'Haute', message: 'Absence prolongée de tension sur une phase active.' },
+  { id: 'OVER_VOLT', name: 'Surtension Critique', priority: 'Haute', message: 'Tension réseau supérieure à 280V (Risque matériel).' },
+  { id: 'UNDER_VOLT', name: 'Sous-tension Prolongée', priority: 'Basse', message: 'Niveau de tension inférieur à 160V.' },
+  { id: 'EARTH_LEAK', name: 'Fuite à la Terre', priority: 'Haute', message: 'Courant résiduel détecté via le conducteur de terre.' },
+  { id: 'MTR_RESET', name: 'Reset Frauduleux', priority: 'Critique', message: 'Tentative de réinitialisation logicielle non autorisée.' },
+  { id: 'UNAUTH_COM', name: 'Accès Comm. Invalide', priority: 'Moyenne', message: 'Multiples tentatives de connexion DLMS avec clés erronées.' },
+  { id: 'CLOCK_ADJ', name: 'Déréglage Horloge', priority: 'Basse', message: 'Tentative de manipulation de l\'heure RTC pour fraude TOU.' },
+  { id: 'REV_ENERGY', name: 'Énergie Inverse', priority: 'Haute', message: 'Flux d\'énergie circulant dans le sens inverse (Injection sauvage).' },
+  { id: 'MISS_NEUT', name: 'Neutre Manquant', priority: 'Haute', message: 'Ruptrure ou déconnexion du neutre source.' },
+  { id: 'SHORT_CIRC', name: 'Court-Circuit', priority: 'Critique', message: 'Protection court-circuit déclenchée (Overload).' },
+  { id: 'PHASE_ERR', name: 'Association Phase Incorrecte', priority: 'Moyenne', message: 'Déphasage anormal entre tension et courant.' },
+  { id: 'FREQ_DEV', name: 'Déviation Fréquence', priority: 'Basse', message: 'Fréquence réseau hors plage (45Hz - 55Hz).' },
+  { id: 'NO_LOAD', name: 'Absence de Charge suspecte', priority: 'Basse', message: 'Consommation nulle prolongée malgré un état actif.' },
+  { id: 'PART_BYP', name: 'Bypass Partiel (Shunt)', priority: 'Haute', message: 'Utilisation d\'une résistance de shunt interne ou externe.' }
+] as const;

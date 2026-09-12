@@ -1,0 +1,242 @@
+[
+  {
+    "obis": "1.0.32.7.0.255",
+    "name": "Tension Simple Phase L1 (V1)",
+    "unit": "V",
+    "status": "SUCCESS",
+    "response": "218.13 V",
+    "value": 218.13
+  },
+  {
+    "obis": "1.0.52.7.0.255",
+    "name": "Tension Simple Phase L2 (V2)",
+    "unit": "V",
+    "status": "SUCCESS",
+    "response": "233.89 V",
+    "value": 233.89
+  },
+  {
+    "obis": "1.0.72.7.0.255",
+    "name": "Tension Simple Phase L3 (V3)",
+    "unit": "V",
+    "status": "SUCCESS",
+    "response": "233.99 V",
+    "value": 233.99
+  },
+  {
+    "obis": "1.0.31.7.0.255",
+    "name": "Courant Phase L1 (I1)",
+    "unit": "A",
+    "status": "SUCCESS",
+    "response": "0.000 A",
+    "value": 0
+  },
+  {
+    "obis": "1.0.51.7.0.255",
+    "name": "Courant Phase L2 (I2)",
+    "unit": "A",
+    "status": "SUCCESS",
+    "response": "0.000 A",
+    "value": 0
+  },
+  {
+    "obis": "1.0.71.7.0.255",
+    "name": "Courant Phase L3 (I3)",
+    "unit": "A",
+    "status": "SUCCESS",
+    "response": "0.000 A",
+    "value": 0
+  },
+  {
+    "obis": "1.0.15.7.0.255",
+    "name": "Puissance Active Totale (|P|)",
+    "unit": "kW",
+    "status": "SUCCESS",
+    "response": "0.0 W",
+    "value": 0
+  },
+  {
+    "obis": "1.0.1.7.0.255",
+    "name": "Puissance Active Import (P+)",
+    "unit": "kW",
+    "status": "EMPTY_OR_UNSUPPORTED",
+    "response": null,
+    "value": null
+  },
+  {
+    "obis": "1.0.35.7.0.255",
+    "name": "Puissance Active L1 (P1)",
+    "unit": "kW",
+    "status": "SUCCESS",
+    "response": "0.0 W",
+    "value": 0
+  },
+  {
+    "obis": "1.0.55.7.0.255",
+    "name": "Puissance Active L2 (P2)",
+    "unit": "kW",
+    "status": "SUCCESS",
+    "response": "0.0 W",
+    "value": 0
+  },
+  {
+    "obis": "1.0.75.7.0.255",
+    "name": "Puissance Active L3 (P3)",
+    "unit": "kW",
+    "status": "SUCCESS",
+    "response": "0.0 W",
+    "value": 0
+  },
+  {
+    "obis": "1.0.13.7.0.255",
+    "name": "Facteur de Puissance Total (Cos φ)",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "1.000",
+    "value": 1
+  },
+  {
+    "obis": "1.0.33.7.0.255",
+    "name": "Facteur de Puissance L1",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "1.000",
+    "value": 1
+  },
+  {
+    "obis": "1.0.53.7.0.255",
+    "name": "Facteur de Puissance L2",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "1.000",
+    "value": 1
+  },
+  {
+    "obis": "1.0.73.7.0.255",
+    "name": "Facteur de Puissance L3",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "1.000",
+    "value": 1
+  },
+  {
+    "obis": "1.0.14.7.0.255",
+    "name": "Fréquence Réseau",
+    "unit": "Hz",
+    "status": "SUCCESS",
+    "response": "50.00 Hz",
+    "value": 50
+  },
+  {
+    "obis": "1.0.1.8.0.255",
+    "name": "Énergie Active Import Totale (A+)",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "0.00 kWh",
+    "value": 0
+  },
+  {
+    "obis": "1.0.2.8.0.255",
+    "name": "Énergie Active Export Totale (A-)",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "0.00 kWh",
+    "value": 0
+  },
+  {
+    "obis": "1.0.15.8.0.255",
+    "name": "Énergie Active Totale (|A|)",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "0.00 kWh",
+    "value": 0
+  },
+  {
+    "obis": "1.0.1.8.1.255",
+    "name": "Énergie Active Import Tarif T1",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "0.00 kWh",
+    "value": 0
+  },
+  {
+    "obis": "1.0.1.8.2.255",
+    "name": "Énergie Active Import Tarif T2",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "0.00 kWh",
+    "value": 0
+  },
+  {
+    "obis": "1.0.1.6.0.255",
+    "name": "Puissance Max Appelée (Max Demand)",
+    "unit": "kW",
+    "status": "SUCCESS",
+    "response": "0.0 W",
+    "value": 0
+  },
+  {
+    "obis": "0.0.96.60.0.255",
+    "name": "Solde Crédit STS",
+    "unit": "kWh",
+    "status": "SUCCESS",
+    "response": "7.00 kWh",
+    "value": 7
+  },
+  {
+    "obis": "0.0.96.3.10.255",
+    "name": "Statut Contacteur / Relais",
+    "unit": "STATE",
+    "status": "SUCCESS",
+    "response": "true",
+    "value": 0
+  },
+  {
+    "obis": "0.0.96.11.0.255",
+    "name": "Capot Principal (Meter Cover)",
+    "unit": "FLAG",
+    "status": "EMPTY_OR_UNSUPPORTED",
+    "response": null,
+    "value": null
+  },
+  {
+    "obis": "0.0.96.11.1.255",
+    "name": "Cache-Bornes (Terminal Cover)",
+    "unit": "FLAG",
+    "status": "EMPTY_OR_UNSUPPORTED",
+    "response": null,
+    "value": null
+  },
+  {
+    "obis": "0.0.96.11.2.255",
+    "name": "Détection Champ Magnétique",
+    "unit": "FLAG",
+    "status": "EMPTY_OR_UNSUPPORTED",
+    "response": null,
+    "value": null
+  },
+  {
+    "obis": "0.0.96.9.0.255",
+    "name": "Température Ambiante Compteur",
+    "unit": "°C",
+    "status": "SUCCESS",
+    "response": "36.20 °C",
+    "value": 36.2
+  },
+  {
+    "obis": "0.0.96.1.0.255",
+    "name": "Numéro de Série Compteur",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "0128260224786",
+    "value": 128260224786
+  },
+  {
+    "obis": "1.0.129.129.10.255",
+    "name": "Code Constructeur (MFC)",
+    "unit": "",
+    "status": "SUCCESS",
+    "response": "0128",
+    "value": 128
+  }
+]
