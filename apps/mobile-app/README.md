@@ -31,4 +31,4 @@ eas build --platform ios
 ```
 
 ---
-*Fait partie de la suite e-EnergieTEC AMI/STS v5.0*
+*Fait partie de la suite souveraine e-EnergieTEC AMI/STS v6.5*

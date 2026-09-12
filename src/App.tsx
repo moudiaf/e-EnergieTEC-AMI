@@ -51,11 +51,13 @@ import { RegionsSection } from './sections/RegionsSection';
 import { DcusSection } from './sections/DcusSection';
 import { CustomerDashboardSection } from './sections/CustomerDashboardSection';
 import { AnalyticsSection } from './sections/AnalyticsSection';
+import { StatisticsSection } from './sections/StatisticsSection';
 import { AssetsSection } from './sections/AssetsSection';
 import { TicketsWrapper } from './sections/TicketsWrapper';
 import { ApiDocsSection } from './sections/ApiDocsSection';
 import { SecuritySection } from './sections/SecuritySection';
 import { RevenueAssuranceSection } from './sections/RevenueAssuranceSection';
+import { VendingSection } from './sections/VendingSection';
 
 import { generateShiftReportPDF, generateRegulatoryReport, generateEnergyLossReport, generateFraudRiskReport, generateMobileMoneyReport, generateSystemIntegrityReport } from './utils/reports';
 
@@ -95,7 +97,7 @@ function MainAppContent() {
     isReplacementModalOpen, setIsReplacementModalOpen,
     isLoadSheddingModalOpen, setIsLoadSheddingModalOpen,
     isShiftModalOpen, setIsShiftModalOpen,
-    currentShift, pastShifts,
+    currentShift, setCurrentShift, pastShifts,
     isTicketModalOpen, setIsTicketModalOpen,
     editingCustomer, setEditingCustomer,
     editingMeter, setEditingMeter,
@@ -158,7 +160,9 @@ function MainAppContent() {
     handlePrintReceipt,
     handleGenerateInvoicePDF,
     handleSaveSettings,
-    handleRotateKeys
+    handleRotateKeys,
+    handleReadTelemetry,
+    handleRemoteRelay
   } = useAmi();
 
   return (
@@ -174,10 +178,12 @@ function MainAppContent() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-bg-main relative">
-        {/* Glow Effects */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#2dd4bf]/5 rounded-full blur-[100px] -ml-40 -mb-40 pointer-events-none"></div>
+      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#070b16] relative">
+        {/* Global SCADA Cyber Grid & Volumetric Glows */}
+        <div className="absolute inset-0 scada-grid-pattern opacity-30 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand/10 rounded-full blur-[140px] -mr-64 -mt-64 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-niger-green/8 rounded-full blur-[130px] -ml-40 -mb-40 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/3 w-[450px] h-[450px] bg-blue-500/5 rounded-full blur-[130px] pointer-events-none" />
 
         {/* Header */}
         <header className="h-20 flex items-center justify-between px-8 bg-bg-dark/50 backdrop-blur-xl border-b border-brand/10 z-30">
@@ -186,7 +192,31 @@ function MainAppContent() {
               <Menu size={24} />
             </button>
             <div>
-              <h2 className="text-xl font-bold text-white capitalize">{currentSection.replace('-', ' ')}</h2>
+              <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                {currentSection === 'statistics' ? 'Statistiques & Bilans' :
+                 currentSection === 'sts-prepaid' ? 'Guichet Vente & STS' :
+                 currentSection === 'mdms' ? 'MDMS Bilan Énergie' :
+                 currentSection === 'meters' ? 'Compteurs AMI' :
+                 currentSection === 'customers' ? 'Clients & Abonnés' :
+                 currentSection === 'tokens' ? 'Historique des Ventes' :
+                 currentSection === 'payments' ? 'Portail Marchand +227' :
+                 currentSection === 'billing' ? 'Facturation' :
+                 currentSection === 'map' ? 'Carte Réseau SIG' :
+                 currentSection === 'dcus' ? 'Concentrateurs DCU' :
+                 currentSection === 'assets' ? 'Gestion Magasin' :
+                 currentSection === 'alerts' ? 'Alertes & Fraudes' :
+                 currentSection === 'audit' ? 'Journal d\'Audit KMS' :
+                 currentSection === 'reports' ? 'Rapports ARSE' :
+                 currentSection === 'regions' ? 'Régions NIGELEC' :
+                 currentSection === 'tariffs' ? 'Gestion des Tarifs' :
+                 currentSection === 'users' ? 'Gestion des Accès' :
+                 currentSection === 'security' ? 'Sécurité & KMS' :
+                 currentSection === 'api-docs' ? 'Documentation API' :
+                 currentSection === 'settings' ? 'Paramètres du Système' :
+                 currentSection === 'vending' ? 'Passerelle HES Autonome' :
+                 currentSection === 'revenue-assurance' ? 'Revenue Assurance' :
+                 currentSection.replace('-', ' ')}
+              </h2>
               <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
                 <span>e-EnergieTEC</span>
                 <ChevronRight size={10} />
@@ -359,6 +389,8 @@ function MainAppContent() {
                       setCurrentSection={setCurrentSection}
                     />
                   );
+                case 'statistics':
+                  return <StatisticsSection />;
                 case 'meters':
                   return (
                     <MetersSection
@@ -407,6 +439,8 @@ function MainAppContent() {
                       onSwitchToPostpaid={() => setCurrentSection('invoices')}
                     />
                   );
+                case 'vending':
+                  return <VendingSection />;
                 case 'tokens':
                   return (
                     <TokensSection
@@ -436,7 +470,6 @@ function MainAppContent() {
                       setAlerts={setAlerts}
                       handleResetTamper={handleResetTamper}
                       onUpdateRule={handleUpdateAlertRule}
-                      onSimulate={() => setIsFraudModalOpen(true)}
                       setViewingMeter={setViewingMeter}
                       meters={meters}
                       setCurrentSection={setCurrentSection}
@@ -485,11 +518,13 @@ function MainAppContent() {
                   return (
                     <PaymentsSection
                       payments={payments}
+                      tokens={tokens}
                       currentShift={currentShift}
                       pastShifts={pastShifts}
                       onInitiatePayment={() => setCurrentSection('sts-prepaid')}
                       onManageShift={() => setIsShiftModalOpen(true)}
                       onRePrintShift={generateShiftReportPDF}
+                      onRefresh={fetchData}
                     />
                   );
                 case 'regions':
@@ -518,7 +553,7 @@ function MainAppContent() {
                       onOpenLoadSheddingModal={() => setIsLoadSheddingModalOpen(true)}
                       handleDeleteDcu={handleDeleteDcu}
                       onPingDcu={(id) => {
-                        addToast(`🏓 Ping DCU ${id} — Réponse OK (latence: ${Math.floor(50 + Math.random() * 150)}ms)`, 'success');
+                        addToast(`🏓 Ping DCU ${id} — Réponse OK`, 'success');
                       }}
                       onRebootDcu={(id) => {
                         if (confirm(`⚠️ Confirmer le redémarrage à distance du concentrateur ${id} ?`)) {
@@ -533,11 +568,11 @@ function MainAppContent() {
                   return (
                     <ReportsSection
                       generateRegulatoryReport={() => generateRegulatoryReport(meters, alerts, payments, analyticsTrends, [])}
-                      onGenerateEnergyLoss={() => generateEnergyLossReport([
-                        { areaName: 'Niamey - Plateau', injectedKwh: 450000, meteredKwh: 412000, lossPercentage: 8.4 },
-                        { areaName: 'Niamey - Yantala', injectedKwh: 320000, meteredKwh: 265000, lossPercentage: 17.2 },
-                        { areaName: 'Maradi - Centre', injectedKwh: 180000, meteredKwh: 168000, lossPercentage: 6.7 }
-                      ])}
+                      onGenerateEnergyLoss={() => generateEnergyLossReport(regions.map(r => {
+                        const regionMeterIds = meters.filter(m => m.location.includes(r.areaName)).map(m => m.id);
+                        const kwh = tokens.filter(t => regionMeterIds.includes(t.meterId)).reduce((s, t) => s + (t.kwh || 0), 0);
+                        return { areaName: r.areaName, injectedKwh: kwh, meteredKwh: kwh, lossPercentage: 0 };
+                      }))}
                       onGenerateFraudAudit={() => generateFraudRiskReport(alerts, meters)}
                       onGenerateMobileMoney={() => generateMobileMoneyReport(payments)}
                       onGenerateSystemIntegrity={() => generateSystemIntegrityReport(meters)}
@@ -579,6 +614,7 @@ function MainAppContent() {
                   return (
                     <SecuritySection
                       audits={audits}
+                      meters={meters}
                       onRotateKeys={handleRotateKeys}
                     />
                   );
@@ -588,13 +624,6 @@ function MainAppContent() {
                       meters={meters}
                       tokens={tokens}
                       regions={regions}
-                      onSimulateAnomaly={() => {
-                        const onlineMeters = meters.filter(m => m.status === 'online');
-                        const targetMeter = onlineMeters[Math.floor(Math.random() * onlineMeters.length)] || meters[0];
-                        if (targetMeter) {
-                          handleSimulateAnomaly(targetMeter.id);
-                        }
-                      }}
                     />
                   );
                 case 'customer-dashboard':
@@ -628,7 +657,6 @@ function MainAppContent() {
                       alerts={alerts}
                       tokens={tokens}
                       payments={payments}
-                      onSimulateAnomaly={() => setIsFraudModalOpen(true)}
                       setViewingMeter={setViewingMeter}
                       setCurrentSection={setCurrentSection}
                     />
@@ -816,6 +844,9 @@ function MainAppContent() {
         customers={customers}
         setCurrentSection={setCurrentSection}
         addToast={addToast}
+        handleReadTelemetry={handleReadTelemetry}
+        handleRemoteRelay={handleRemoteRelay}
+        fetchData={fetchData}
       />
 
       <GeneratedTokenModal
@@ -830,14 +861,9 @@ function MainAppContent() {
         shift={currentShift}
         onOpenShift={handleOpenShift}
         onCloseShift={handleCloseShift}
+        onNewShift={() => setCurrentShift(null)}
       />
 
-      <FraudSimulationModal
-        isOpen={isFraudModalOpen}
-        onClose={() => setIsFraudModalOpen(false)}
-        meters={meters}
-        onTriggerSim={handleTriggerFraud}
-      />
       {generatedToken && <ThermalReceipt token={generatedToken} />}
     </div>
   );

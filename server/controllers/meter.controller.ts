@@ -11,6 +11,30 @@ export const MeterController = {
     }
   },
 
+  async getMeterById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const meter = await MeterRepository.getById(id);
+      if (!meter) {
+        return res.status(404).json({ success: false, message: `Compteur ${id} non trouvé.` });
+      }
+      res.json(meter);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  },
+
+  async updateMeter(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      await MeterRepository.update(id, req.body);
+      await auditService.log('METER_UPDATE', `Mise à jour du compteur ${id}`, (req as any).user?.username);
+      res.json({ success: true, message: `Compteur ${id} mis à jour avec succès.` });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  },
+
   async registerMeter(req: Request, res: Response) {
     try {
       const { id, serialNumber } = req.body;
@@ -162,50 +186,18 @@ export const MeterController = {
     }
   },
 
-  // --- SIMULATIONS ---
+  // --- SIMULATIONS DÉFINITIVEMENT DÉSACTIVÉES EN MODE PRODUCTION PURE ---
   async simulateAnomaly(req: Request, res: Response) {
-    try {
-      const { meterId } = req.body;
-      const id = `ALT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
-      await AlertRepository.insert({
-        id,
-        type: 'ANOMALY',
-        title: 'Anomalie détectée',
-        message: "Comportement anormal détecté par l'IA",
-        meterId,
-        timestamp: new Date().toISOString(),
-        status: 'unread',
-        priority: 'high',
-        category: 'technical'
-      });
-      
-      res.json({ success: true, id });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    return res.status(403).json({
+      success: false,
+      error: "Mode Production Pure NIGELEC verrouillé : les simulations d'anomalies artificielles sont définitivement désactivées. Seules les télémesures matérielles réelles font foi."
+    });
   },
 
   async simulateFraud(req: Request, res: Response) {
-    try {
-      const { meterId, type } = req.body;
-      const id = `ALT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
-      await AlertRepository.insert({
-        id,
-        type: type.toUpperCase(),
-        title: `Fraude détectée: ${type}`,
-        message: `Simulation de fraude de type ${type}`,
-        meterId,
-        timestamp: new Date().toISOString(),
-        status: 'unread',
-        priority: 'critical',
-        category: 'security'
-      });
-      
-      res.json({ success: true, id });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
-    }
+    return res.status(403).json({
+      success: false,
+      error: "Mode Production Pure NIGELEC verrouillé : les simulations de fraudes artificielles sont définitivement désactivées. Seule la détection physique par FraudDetectionService est autorisée."
+    });
   }
 };

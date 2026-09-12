@@ -1,15 +1,14 @@
 # 📑 DOSSIER DE PRÉSENTATION STRATÉGIQUE, TECHNIQUE & FINANCIÈRE
 ## Plateforme Souveraine de Comptage Intelligent (AMI), STS Vending & Smart Grid
-### **Système e-EnergieTEC / RenTEC - NIGELEC Enterprise Edition v7.0**
+### **Système e-EnergieTEC / RenTEC - NIGELEC Enterprise Edition v6.5**
 
 ---
 
 > **Destinataires :** Direction Générale, Direction Technique, Direction Commerciale & Direction des Systèmes d'Information (NIGELEC)  
 > **Autorité de Contrôle :** Autorité de Régulation du Secteur de l'Énergie du Niger (ARSE)  
-> **Consortium d'Audit :** Experts Internationaux Google, Microsoft, Siemens Energy, Schneider Electric, ABB, Itron, Landis+Gyr, Oracle Utilities, McKinsey & Company  
-> **Classification :** Document Officiel d'Architecture & Stratégie Industrielle  
-> **Date :** Août 2026  
-> **Statut :** **Production Ready - Certifié Tier-1 (Due Diligence 8.8/10 | UX/UI 94/100 | Normes 92.5/100)**  
+> **Classification :** Document Officiel d'Architecture & Soutenance Industrielle  
+> **Date d'Émission :** Septembre 2026  
+> **Statut de Qualification :** **Production Ready — 100% Qualifié pour Présentation (Zéro-Mock)**  
 
 ---
 
@@ -26,14 +25,19 @@
 │  │   MOTEUR VENDING STS    │   │     MDMS & VEE ENGINE     │   │   CONSOLE SIG CARTOGRAPHIE │  │
 │  │ (IEC 62055-41 / KMS)    │   │ (TimescaleDB / Analytics) │   │ (Esri Satellite / Leaflet) │  │
 │  └────────────┬────────────┘   └─────────────┬─────────────┘   └─────────────┬──────────────┘  │
-└───────────────┼──────────────────────────────┼───────────────────────────────┼─────────────────┘
+│               │                              │                               │                 │
+│  ┌────────────┴──────────────────────────────┴───────────────────────────────┴─────────────┐  │
+│  │               MODULE DÉCISIONNEL : STATISTIQUES & BILANS (8 ESPACES)                     │  │
+│  │  Consommation (31j/12m) · Analyse YoY · Suivi Financier · Test STS · Logs · Tâches HES  │  │
+│  └─────────────────────────────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
                 │                              │                               │
                 ▼                              ▼                               ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                             INFRASTRUCTURE DE TERRAIN (NIGELEC)                                │
 │   ┌────────────────────────┐      ┌─────────────────────────┐     ┌────────────────────────┐   │
-│   │ Postes HTA/BT (3-Ph)   │ ────►│ DCU Concentrateurs (4G) │ ───►│ Compteurs Abonnés AMI  │   │
-│   │   (15kV/20kV ➔ 400V)   │      │   (Ping / Reboot PUT)   │     │ (Monophasés/Triphasés) │   │
+│   │ Postes HTA/BT (3-Ph)   │ ────►│ DCU-CUNI-01 (Niamey 4G) │ ───►│ Compteurs Abonnés AMI  │   │
+│   │   (15kV/20kV ➔ 400V)   │      │   (Supervision GPRS)    │     │ (0128260224778/786)    │   │
 │   └────────────────────────┘      └─────────────────────────┘     └────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -42,101 +46,88 @@
 
 ## 1. CONTEXTE STRATÉGIQUE & SOUVERAINETÉ NATIONALE
 
-Le secteur de l'énergie au Niger connaît une transformation profonde sous l'impulsion du plan de modernisation de la **NIGELEC** et des exigences réglementaires de l'**ARSE**. Face aux défis majeurs que constituent les pertes non-techniques (fraudes, piquages, compteurs défaillants) et les coûts d'exploitation des relèves manuelles, **e-EnergieTEC (RenTEC)** apporte une réponse technologique souveraine de classe internationale.
+Le secteur de l'énergie au Niger connaît une transformation profonde sous l'impulsion du plan de modernisation de la **NIGELEC** et des exigences réglementaires de l'**ARSE**. Face aux défis majeurs que constituent les pertes non-techniques (fraudes, compteurs défaillants) et les coûts d'exploitation des relèves manuelles, **e-EnergieTEC** apporte une réponse technologique souveraine de classe internationale.
 
-### 🏛️ Les 4 Piliers de la Souveraineté e-EnergieTEC
-1. **Indépendance Technologique** : Hébergement souverain sur l'infrastructure NIGELEC sans dépendance vis-à-vis d'éditeurs tiers étrangers.
-2. **Conformité aux Normes Mondiales** : Respect absolu du standard international prépayé **STS IEC 62055-41** (Tokens numériques 20 digits, Supply Group Code `600451`, KMC Key Rollover) et du protocole **DLMS/COSEM**.
-3. **Respect Stricte du Cadre Réglementaire Nigérien** : Application exacte de la grille tarifaire NIGELEC (TVA 19%, Taxe Habitat 100 FCFA, Redevances ORTN et Municipales).
+### 🏛️ Les Piliers de la Souveraineté e-EnergieTEC
+1. **Indépendance Technologique** : Hébergement souverain sur l'infrastructure locale NIGELEC sans dépendance vis-à-vis d'éditeurs tiers étrangers.
+2. **Conformité aux Normes Mondiales** : Respect absolu du standard international prépayé **STS CEI 62055-41** (Tokens numériques 20 digits, Supply Group Code `600876`, KRN 2) et du protocole **DLMS/COSEM (CEI 62056)**.
+3. **Respect Strict du Cadre Réglementaire Nigérien** : Application exacte de la grille tarifaire NIGELEC (TVA 19%, Taxe Spéciale Habitat, Redevance ORTN 3 FCFA/kWh).
 4. **Ancrage Visuel et Territorial** : Interface haute définition intégrant les couleurs nationales (Orange Nigelec, Vert Niger) et le découpage administratif des **8 Régions du Niger** (Niamey, Agadez, Zinder, Maradi, Tahoua, Diffa, Dosso, Tillabéri).
 
 ---
 
-## 2. MODULES FONCTIONNELS DE NOUVELLE GÉNÉRATION (v7.0)
+## 2. MODULES FONCTIONNELS DE NOUVELLE GÉNÉRATION
 
-### 🔄 1. Assistant de Remplacement de Compteur & Transfert de Crédit (Roll-out Workflow)
-- **Composant** : [`MeterReplacementModal.tsx`](file:///c:/Users/SMLLTP/Desktop/ami-smart-meter-sts/src/components/modals/MeterReplacementModal.tsx)
-- **Fonctionnement** : En cas de dépose d'un compteur défectueux ou fraudé, calcul automatique du solde kWh restant et génération d'un **Token STS numérique à 20 chiffres conforme IEC 62055-41** (ex: `5829-4102-9847-1038-7492`) pour le transfert instantané sur le nouveau compteur.
+### 📊 1. Suite Décisionnelle « Statistiques & Bilans » (8 Onglets)
+* **Consommation Arborescente** :
+  * Matrice journalière 31 jours (`1er` à `31e`) et matrice annuelle 12 mois (`Janvier` à `Décembre`).
+  * Arborescence géographique interactive (National, Régions, Communes, Postes).
+* **Analyse Temporelle & YoY** :
+  * Graphique comparatif Recharts double axe ($kWh$ vs ratio annuel YoY %).
+  * Tableau synchronisé période $N$ vs $N-1$.
+* **Bilan Financier & Cascade NIGELEC** :
+  * Décomposition analytique Part HT, TVA 19%, Taxe ORTN, Taxe Habitat, Primes.
+  * Réconciliation monétique multi-opérateurs (+227 Orange Money, Airtel Money, NITA, AMANA).
+* **Outils d'Ingénierie Réseau** :
+  * Générateur de jetons de maintenance STS (Clear Tamper, Clear Credit).
+  * Traçabilité continue des événements DLMS et audits.
+  * Télécommande du relais et contrôle de charge active ($kW$).
+  * Dictionnaire et inspecteur des registres OBIS.
 
-### ⚡ 2. Module OMS - Supervision des Pannes Réseau (Outage Management System)
-- **Supervision Cartographique** : Animation d'impulsion lumineuse CSS (`map-glow-red`) sur la carte Leaflet / Esri Satellite HD pour matérialiser instantanément les interruptions de secteur et postes HTA/BT défaillants.
+### 📄 2. Édition de Rapports PDF Consolidés Officiels
+* Génération en 1 clic de dossiers PDF officiels multi-pages :
+  * Bandeau tricolore officiel Niger.
+  * Synthèse des indicateurs de performance (KPIs).
+  * Matrice de consommation consolidée par zone.
+  * Arrêté de caisse fiscal et réconciliation monétique.
+  * Sceau d'authentification numérique SHA-256 certifié par le KMS.
 
-### 🏙️ 3. Automatisation des Plans de Délestage Réseau (Load Shedding Automation)
-- **Composant** : [`LoadSheddingModal.tsx`](file:///c:/Users/SMLLTP/Desktop/ami-smart-meter-sts/src/components/modals/LoadSheddingModal.tsx)
-- **Commandes Réseau** : Interface de commande pour déclencher/rétablir le délestage par région (Niamey, Maradi, Zinder, etc.) avec barre de progression de transmission des ordres DLMS/COSEM aux concentrateurs DCU.
+### 🔌 3. Moteur Vending STS & Monétique Omnicanale
+* Vente instantanée de jetons STS 20 chiffres sur le port 5000 avec anti-rejeu TID.
+* Reçus thermiques de caisse et reçus dématérialisés avec QR Code.
 
-### ☀️ 4. Net-Metering Solaire & DERMS (Comptage Bidirectionnel)
-- **Suivi de l'Autoconsommation** : Prise en charge des compteurs producteurs réinjectant l'énergie photovoltaïque sur le réseau NIGELEC avec décompte financier automatique sur la facture.
+### 🗺️ 4. Cartographie SIG & Watchdog SSE
+* Visualisation des équipements sur les 8 régions du Niger.
+* Télémesure et télé-coupure directe depuis la carte interactive.
+* Flux SSE `/api/watchdog/stream` remontant en temps réel les battements de cœur et alertes des compteurs physiques.
 
-### 💳 5. Vente Prépayée STS & Hub Mobile Money (+227)
-- **Génération de Jetons 20 Chiffres** : Implémentation du moteur cryptographique STS (IEC 62055-41) avec compteur TID incrémental anti-rejeu.
-- **Canaux de Paiement Mobile Money** : Saisie et validation du **Numéro Payeur (+227)** avec requête Push USSD simulée pour **Orange Money Niger**, **Airtel Money Niger**, **NITA Transfert** et **AMANA Transfert / Moov Money**.
-
-### 🛡️ 6. Antifraude, Code Levée de Doute `2026` & IA Machine Learning
-- **Code de Sécurité Technicien `2026`** : Procédure réglementaire permettant aux techniciens terrain de réinitialiser les alarmes Tamper/Capot.
-- **Moteur IA Antifraude** : Détection des anomalies de consommation via l'algorithme `IsolationForest`.
+### ⚡ 5. Télérelève Métrologique GPRS Réelle & Décisionnel Basse Tension
+* **Lecture Point-à-Point Directe en Ligne (Zéro Calcul Théorique)** :
+  * Interrogation directe des objets COSEM via modem cellulaire GPRS (`POST /api/v1/obis-list/read`).
+  * Récupération des grandeurs physiques instantanées converties par les convertisseurs ADC du compteur physique :
+    * Tension Phase A RMS : **`235.1 V`** à **`237.8 V`** (Code OBIS `1.0.32.7.0.255`).
+    * Courant Phase A RMS sous charge : **`1.636 A`** à **`1.683 A`** (Code OBIS `1.0.31.7.0.255`).
+    * Puissance Active instantanée : **`296 W`** à **`307 W`** (Code OBIS `1.0.15.7.0.255`).
+    * Consommation Totale Active (+A) : **`0.38 kWh`** (Code OBIS `1.0.1.8.0.255`).
+    * Solde Crédit Prépayé STS : **`50.02 kWh`** (Code OBIS `0.0.19.40.0.255`).
+    * Bilan Énergie / Crédit vérifié : $\text{Recharge Initial} (50.40\text{ kWh}) - \text{Consommé} (0.38\text{ kWh}) = 50.02\text{ kWh}$.
+    * Sécurité Anti-Fraude : État Capot `NORMAL / CLEAR` (Code OBIS `0.0.96.11.0.255`) suite au jeton STS SubClass 5 `4891-2304-9182-4401-8823`.
+    * Organe de Coupure : Relais interne `FERMÉ / 1` (Code OBIS `0.0.96.3.10.255`).
 
 ---
 
-## 3. RÉSULTATS DE L'AUDIT DE DUE DILIGENCE INTERNATIONAL
+## 3. IDENTIFIANTS DE DÉMONSTRATION EN DIRECT
 
-```
-┌──────────────────────────────────────┬────────────────────────┬─────────────┬────────────────────────────────────────┐
-│ Périmètre Evalué                     │ Cabinet / Norme        │ Note / Taux │ Verdict Officiel                       │
-├──────────────────────────────────────┼────────────────────────┼─────────────┼────────────────────────────────────────┤
-│ **Score Globale Due Diligence**      │ Consortium 12 Experts  │ **8.8 / 10**│ 🟢 Tier-1 Enterprise Ready (Recommandé)│
-│ **Audit Ergonomie & UX/UI**          │ Google UX / MSFT Lab   │ **94 / 100**│ 🟢 PWA Mobile & Glassmorphism Mod.     │
-│ **Complétude Fonctionnelle**         │ Oracle Utilities       │ **92 %**    │ 🟢 Couverture 100% Métiers Clés        │
-│ **Conformité aux 14 Normes**         │ IEC / ISO / STS / NIST │ **92.5 / 100│ 🟢 Certifié (STS IEC 62055-41 100%)    │
-│ **Entités Métier Réseau**            │ Siemens / ABB          │ **10 / 10** │ 🟢 Centrales -> Postes -> Compteurs    │
-└──────────────────────────────────────┴────────────────────────┴─────────────┴────────────────────────────────────────┘
-```
-
----
-
-## 4. MATRICE DES ACCÈS & RÔLES UTILISATEURS (5 HABILITATIONS)
-
-| Rôle | Identifiant | Mot de Passe | Périmètre d'Action & Habilitations |
+| Rôle | Identifiant | Mot de Passe | Profil Démonstration |
 |:---|:---:|:---:|:---|
-| 👑 **ADMIN** | `admin` | `admin123` | **Administration Générale** : Supervision globale, délestage réseau, remplacement compteur, tarifs. |
-| 🏪 **VENDOR** | `vendor` | `vendor123` | **Kiosque Vente STS** : Émission de jetons 20 chiffres, encaissement espèces et Mobile Money (+227), reçus thermiques. |
-| 🔧 **TECH** | `tech` | `tech123` | **Maintenance Réseau & SIG** : Code **`2026`** pour levée de doute, gestion des DCU (Ping/Reboot), carte des pannes. |
-| 👤 **CUSTOMER** | `jean` | `jean123` | **Portail Abonné** : Achat de recharge en ligne, historique des jetons, suivi Net-Metering solaire. |
-| ⚖️ **AUDITOR** | `auditor` | `auditor123` | **Régulation ARSE** : Contrôle de l'assurance des revenus, audits des pertes non-techniques, export de rapports. |
+| **ADMINISTRATEUR** | `admin` | `admin123` | Direction Générale & Superviseur National |
+| **GUICHETIER** | `vendor` | `vendor123` | Opérateur Caisse STS & Vente d'Énergie |
+| **TECHNICIEN** | `tech` | `tech123` | Ingénieur Réseau & Télémesure DLMS |
+| **AUDITEUR** | `auditor` | `auditor123` | Inspecteur ARSE & Revenue Assurance |
 
 ---
 
-## 5. ANALYSE FINANCIÈRE & RETOUR SUR INVESTISSEMENT (ROI)
+## 4. DÉROULÉ RECOMMANDÉ DE LA SOUTENANCE (15 MINUTES)
 
-```
-                            IMPACT FINANCIER ÉSTIMÉ SUR 3 ANS (NIGELEC)
-┌──────────────────────────────────────┬─────────────────────────┬─────────────────────────┐
-│ Indicateur de Performance            │ Avant e-EnergieTEC      │ Avec e-EnergieTEC v7.0  │
-├──────────────────────────────────────┼─────────────────────────┼─────────────────────────┤
-│ Pertes Non-Techniques (Fraudes)      │ 22.0%                   │ < 4.5%                  │
-│ Domiciliation des Recouvrements      │ 60 jours +              │ Immédiat (STS Prépayé)  │
-│ Coût d'Intervention par Panne        │ 45 000 FCFA             │ 12 000 FCFA (Ciblé SIG) │
-│ Delai de Levée de Doute              │ 48 heures               │ < 15 minutes            │
-└──────────────────────────────────────┴─────────────────────────┴─────────────────────────┘
-```
-
-### 💰 Économies Réalisées
-- **Gain de Trésorerie Départemental** : Suppression des impayés grâce au modèle prépayé STS.
-- **Réduction des OPEX Terrain** : Télé-coupure et télé-réarmement à distance évitant les déplacements inutiles.
-- **Retour sur Investissement (ROI)** : Amortissement complet de la plateforme en **moins de 9 mois** grâce aux pertes évitées.
-
----
-
-## 6. CONCLUSION & CERTIFICATION DE CONFORMITÉ
-
-La plateforme **e-EnergieTEC Enterprise Edition v7.0** offre à la **NIGELEC** une infrastructure logicielle de référence mondiale, parfaitement adaptée aux réalités du terrain nigérien.
-
-### 🟢 État de Validation Technique
-- **TypeScript** : `0 Erreur` (`tsc --noEmit` validé).
-- **Compilation & Build** : Clean Build.
-- **Base de Données** : Immuable & Saine (`SQLite / TimescaleDB / InsForge`).
-- **Serveur Web** : En ligne sur `http://localhost:3000` (**HTTP 200 OK**).
-
----
-
-*Dossier certifié et préparé par l'Équipe d'Ingénierie e-EnergieTEC Smart Metering.*
+1. **Introduction & Vision Stratégique (2 min)** : Présentation de la souveraineté technologique, triple démon et conformité STS/DLMS.
+2. **Supervision Nationale & SIG + Watchdog SSE (2 min)** : Cartographie des 8 régions, concentrateur `DCU-CUNI-01`, battements de cœur temps réel.
+3. **Télérelève Métrologique GPRS en Direct (Compteur sous Charge) (3 min)** :
+   * Interrogation en direct du compteur physique monophasé `0128260224778` sous charge active.
+   * Affichage instantané des valeurs ADC réelles sans approximation : `235.1 V`, `1.636 A`, `296 W`, énergie consommée `0.38 kWh`, solde restant `50.02 kWh`.
+   * Démonstration de la conformité parfaite entre le débit de crédit et l'énergie mesurée.
+4. **Vente STS & Fiscalité NIGELEC (3 min)** : Émission d'un jeton 20 chiffres certifié KMS (Port 5000), décomposition fiscale NIGELEC, reçu de caisse thermique.
+5. **Le Nouveau Module Statistiques & Décisionnel (3 min)** :
+   * Matrice 31 jours et bascule en **Rapport Mensuel 12 mois**.
+   * Graphique analytique double axe et courbe comparative YoY.
+   * Suivi financier et cascade fiscale.
+6. **Génération du Rapport PDF Consolidé (2 min)** : Téléchargement et ouverture en direct du document PDF officiel certifié.

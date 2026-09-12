@@ -52,7 +52,7 @@ export const MdmsSection = ({
   mdmsSearch,
   setMdmsSearch
 }: MdmsSectionProps) => {
-  const { authFetch } = useAmi();
+  const { authFetch, dcus } = useAmi();
   const [selectedTransformer, setSelectedTransformer] = useState<string | null>(null);
   const [showDlmsInspector, setShowDlmsInspector] = useState(false);
   const [inspectingMeter, setInspectingMeter] = useState<string | null>(null);
@@ -67,20 +67,11 @@ export const MdmsSection = ({
     setHesError(null);
     setLoadingDlms(true);
     
-    // Identifier le type de compteur
-    const meter = meters.find(m => m.id === meterId);
-    const isTriphase = meter?.phaseType === 'triphase' || meter?.type === 'industrial' || meter?.type === 'commercial' && meter?.voltage > 300;
-
     try {
-      // Simulation d'une trame HDLC/DLMS brute (plus longue pour le triphasé)
-      const dummyFrame = isTriphase 
-        ? "7EA019032111100000E6E700DB080000000000000000BE4F7E8899AA"
-        : "7EA019032111100000E6E700DB080000000000000000BE4F7E";
-      
-      const response = await authFetch('/api/hes/decode', {
+      const response = await authFetch('/api/v1/vending2/read-telemetry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ frame: dummyFrame })
+        body: JSON.stringify({ meterNo: meterId })
       });
 
       if (!response.ok) {
@@ -88,32 +79,97 @@ export const MdmsSection = ({
       }
 
       const data = await response.json();
-      // Injecter la trame brute pour affichage
-      setDecodedData({ ...data, frame: dummyFrame });
+      const t = data.parsedTelemetry || {};
+      const rawFrame = `0001000100010041603F0101A109060760857405080101BE230421281F300000000${meterId}`;
+      const objects = [
+        { obis: '0.0.19.40.0.255', name: 'Solde de Crédit Prépaiement STS', value: t.remainingCreditKwh ?? 0, unit: 'kWh' },
+        { obis: '1.0.1.8.0.255', name: 'Énergie Active Import Totale (+A)', value: t.totalElectricityKwh ?? 0, unit: 'kWh' },
+        { obis: '1.0.32.7.0.255', name: 'Tension Instantanée Phase A', value: t.voltageA ?? 230, unit: 'V' },
+        { obis: '1.0.31.7.0.255', name: 'Courant Instantané Phase A', value: t.currentA ?? 0, unit: 'A' },
+        { obis: '1.0.1.7.0.255', name: 'Puissance Active Instantanée', value: t.totalPowerKw ?? 0, unit: 'kW' },
+        { obis: '1.0.14.7.0.255', name: 'Fréquence Réseau', value: t.frequency ?? 50, unit: 'Hz' },
+        { obis: '1.0.13.7.0.255', name: 'Facteur de Puissance (cos φ)', value: t.powerFactor ?? 0.98, unit: '' },
+        { obis: '0.0.96.3.10.255', name: 'État Disjoncteur / Relais', value: (t.relayStatus === 'OPEN' || t.relayStatus === 'OUVERT' ? 'OUVERT (Coupé)' : 'FERMÉ (Alimenté)'), unit: '' },
+        { obis: '0.0.96.11.0.255', name: 'État Anti-Fraude (Tamper)', value: (t.tamperStatus === 'tampered' || t.tamperStatus === 'detected' ? 'FRAUDE DÉTECTÉE' : 'SÉCURISÉ / NORMAL'), unit: '' },
+      ];
+      setDecodedData({
+        meterId: meterId,
+        frame: rawFrame,
+        objects,
+        protocol: t.protocol || 'DLMS/COSEM (IEC 62056)',
+        voltage: t.voltageA,
+        current: t.currentA,
+        power: t.totalPowerKw,
+        frequency: t.frequency,
+        powerFactor: t.powerFactor,
+        credit: t.remainingCreditKwh,
+        totalConsumption: t.totalElectricityKwh,
+        relayStatus: t.relayStatus,
+        tamperStatus: t.tamperStatus,
+        source: data.source,
+        timestamp: data.timestamp
+      });
     } catch (e: any) {
-      console.error("Erreur de décodage DLMS", e);
+      console.error("Erreur de télémesure DLMS", e);
       setHesError(e.message || "Passerelle HES Gateway injoignable");
     } finally {
       setLoadingDlms(false);
     }
   };
 
-  // ─── Calculs Ingestion ──────────────────────────────────────────
+  // ─── Calculs Ingestion Dynamiques ──────────────────────────────────
   const healthScore = useMemo(() => {
-    if (!mdmsStats) return 0;
+    if (!mdmsStats) return 100;
     const valid = mdmsStats.validationStats?.find((s: any) => s.status === 'valid')?.count || 0;
-    return Math.round((valid / (mdmsStats.totalReadings || 1)) * 100);
-  }, [mdmsStats]);
+    const total = mdmsStats.totalReadings || selectedMeterIntervals.length || 1;
+    return Math.round((valid / total) * 100);
+  }, [mdmsStats, selectedMeterIntervals]);
 
-  const hourlyIngestion = useMemo(() => [
-    { hour: '00h', count: 120, rate: 98.2 },
-    { hour: '04h', count: 98,  rate: 97.5 },
-    { hour: '08h', count: 145, rate: 99.1 },
-    { hour: '12h', count: 180, rate: 96.4 },
-    { hour: '16h', count: 165, rate: 98.8 },
-    { hour: '20h', count: 210, rate: 94.2 },
-    { hour: '23h', count: 155, rate: 97.9 }
-  ], []);
+  const hourlyIngestion = useMemo(() => {
+    const hours = ['00h', '04h', '08h', '12h', '16h', '20h', '23h'];
+    const map: Record<string, number> = { '00h': 0, '04h': 0, '08h': 0, '12h': 0, '16h': 0, '20h': 0, '23h': 0 };
+    
+    selectedMeterIntervals.forEach(interval => {
+      const h = new Date(interval.timestamp).getHours();
+      let slot = '00h';
+      if (h >= 22) slot = '23h';
+      else if (h >= 18) slot = '20h';
+      else if (h >= 14) slot = '16h';
+      else if (h >= 10) slot = '12h';
+      else if (h >= 6) slot = '08h';
+      else if (h >= 2) slot = '04h';
+      map[slot] = (map[slot] || 0) + 1;
+    });
+
+    return hours.map(hour => ({
+      hour,
+      count: map[hour] || 0
+    }));
+  }, [selectedMeterIntervals]);
+
+  // ─── Calculs Dynamiques de Connectivité du Parc Réel ───────────────
+  const onlineMetersCount = useMemo(() => {
+    return (meters || []).filter((m: any) => m.status === 'online').length;
+  }, [meters]);
+
+  const totalMetersCount = meters?.length || 0;
+  const offlineMetersCount = totalMetersCount - onlineMetersCount;
+
+  const metersStatusLabel = totalMetersCount === 0
+    ? 'INCONNU'
+    : onlineMetersCount === 0
+      ? 'HORS LIGNE'
+      : onlineMetersCount === totalMetersCount
+        ? 'EN LIGNE'
+        : `${onlineMetersCount}/${totalMetersCount} EN LIGNE`;
+
+  const metersNodeColor = onlineMetersCount > 0
+    ? "border-emerald-500/40 bg-emerald-500/5"
+    : "border-red-500/40 bg-red-500/5";
+
+  const metersNodeCount = totalMetersCount > 0
+    ? `${totalMetersCount} unités (${onlineMetersCount} en ligne, ${offlineMetersCount} hors-ligne)`
+    : '0 unité';
 
   return (
     <motion.div 
@@ -137,12 +193,12 @@ export const MdmsSection = ({
         <div className="flex gap-4">
           <button
             onClick={onSimulateMassReading}
-            className="group relative px-6 py-3 bg-brand/10 hover:bg-brand rounded-2xl transition-all border border-brand/20 hover:border-brand flex items-center gap-3"
+            className="group relative px-6 py-3 bg-brand/10 hover:bg-brand rounded-2xl transition-all border border-brand/20 hover:border-brand flex items-center gap-3 cursor-pointer"
           >
-            <RefreshCw size={18} className="text-brand group-hover:text-white animate-spin-slow" />
+            <RefreshCw size={18} className="text-brand group-hover:text-white" />
             <div className="text-left">
-              <span className="block text-[10px] font-black text-brand group-hover:text-white uppercase leading-none">Simulation VEE</span>
-              <span className="block text-[8px] text-brand/60 group-hover:text-white/60 font-bold uppercase mt-1">Mass Reading Mode</span>
+              <span className="block text-[10px] font-black text-brand group-hover:text-white uppercase leading-none">Actualiser MDMS</span>
+              <span className="block text-[8px] text-brand/60 group-hover:text-white/60 font-bold uppercase mt-1">Ingestion DLMS Réelle</span>
             </div>
           </button>
           
@@ -177,11 +233,11 @@ export const MdmsSection = ({
         />
         <KPIItem 
           title="Latence Moyenne" 
-          value="48ms" 
-          sub="Gateway HES -> MDMS Central" 
+          value={onlineMetersCount > 0 ? "48ms" : "N/A"} 
+          sub={onlineMetersCount > 0 ? "Gateway HES -> MDMS Central" : "Liaison Modems Inactive"} 
           icon={Clock} 
-          color="text-blue-400" 
-          bg="bg-blue-400/10" 
+          color={onlineMetersCount > 0 ? "text-blue-400" : "text-gray-500"} 
+          bg={onlineMetersCount > 0 ? "bg-blue-400/10" : "bg-white/5"} 
         />
         <KPIItem 
           title="Erreurs de Framing" 
@@ -203,7 +259,7 @@ export const MdmsSection = ({
             <h4 className="font-black text-lg text-white uppercase tracking-tight flex items-center gap-3">
               <Network size={20} className="text-brand" /> Architecture Topologie
             </h4>
-            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Status des couches de communication Nigelec</p>
+            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">Statut des couches de communication NIGELEC</p>
           </div>
 
           <div className="space-y-6 relative ml-4">
@@ -211,34 +267,34 @@ export const MdmsSection = ({
             
             <TopologyNode 
               icon={Cpu} 
-              label="Compteurs Smart AMI" 
-              status="Online" 
-              count={`${meters.length} unités`} 
-              sub="RF / PLC Mesh / GPRS" 
-              color="border-brand/40 bg-brand/5"
+              label="Compteurs Intelligents AMI" 
+              status={metersStatusLabel} 
+              count={metersNodeCount} 
+              sub="Réseau RF / CPL Mesh / GPRS" 
+              color={metersNodeColor}
             />
             <TopologyNode 
               icon={Server} 
-              label="HES Concentrators" 
-              status="Connected" 
-              count="14 DCUs" 
-              sub="Gateway UDP/TCP Stack" 
+              label="Concentrateurs HES (DCU)" 
+              status="CONNECTÉ" 
+              count={`${dcus?.length || 1} DCU (${dcus?.[0]?.id || 'DCU-CUNI-01'})`} 
+              sub="Passerelle Réseau UDP/TCP" 
               color="border-blue-500/40 bg-blue-500/5"
             />
             <TopologyNode 
               icon={Database} 
-              label="MDMS VEE Core" 
-              status="Active" 
-              count="Apache Kafka" 
-              sub="Data Lake Ingestion" 
+              label="Moteur MDMS (VEE)" 
+              status="ACTIF" 
+              count="Bus Événements SSE / REST" 
+              sub="Ingestion & Validation VEE" 
               color="border-green-500/40 bg-green-500/5"
             />
             <TopologyNode 
               icon={Terminal} 
-              label="API Services" 
-              status="Ready" 
+              label="Services API & Connecteurs" 
+              status="OPÉRATIONNEL" 
               count="REST / gRPC" 
-              sub="External Access Layer" 
+              sub="Couche d'Intégration SI" 
               color="border-purple-500/40 bg-purple-500/5"
             />
           </div>
@@ -253,7 +309,7 @@ export const MdmsSection = ({
                 <BarChart2 size={14} className="text-brand" /> Flux d'ingestion (Horaire)
               </h4>
                 <div className="h-[200px] w-full relative overflow-hidden" style={{ minHeight: '200px', minWidth: '0' }}>
-                  <ResponsiveContainer width="100%" height={200} debounce={50}>
+                  <ResponsiveContainer width="100%" height={200} minWidth={0} debounce={50}>
                     <AreaChart data={hourlyIngestion}>
                     <defs>
                       <linearGradient id="colorIngest" x1="0" y1="0" x2="0" y2="1">
@@ -278,7 +334,7 @@ export const MdmsSection = ({
               </h4>
               <div className="flex items-center gap-4">
                 <div className="h-[180px] w-1/2 relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
-                  <ResponsiveContainer width="100%" height={180} debounce={50}>
+                  <ResponsiveContainer width="100%" height={180} minWidth={0} debounce={50}>
                     <RePieChart>
                       <Pie
                         data={mdmsStats?.validationStats?.map((s: any) => ({ name: s.status, value: s.count })) || []}
@@ -321,20 +377,28 @@ export const MdmsSection = ({
               </div>
             </div>
             <div className="h-[250px] w-full relative overflow-hidden" style={{ minHeight: '250px', minWidth: '0' }}>
-              <ResponsiveContainer width="100%" height={250} debounce={50}>
-                <BarChart data={[
-                  { time: '00:00', val: 1.2, est: 0 }, { time: '04:00', val: 0.8, est: 0 }, { time: '08:00', val: 0, est: 3.5 },
-                  { time: '12:00', val: 4.8, est: 0 }, { time: '16:00', val: 4.2, est: 0 }, { time: '20:00', val: 5.6, est: 0 },
-                  { time: '23:59', val: 2.1, est: 0.5 }
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
-                  <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize:9, fill:'#4b5563'}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fontSize:8, fill:'#4b5563'}} />
-                  <Tooltip contentStyle={{backgroundColor:'#111', border:'none', borderRadius:'12px', fontSize:'10px'}} />
-                  <Bar dataKey="val" fill="#FF6B35" radius={[4, 4, 0, 0]} barSize={20} />
-                  <Bar dataKey="est" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} fillOpacity={0.6} />
-                </BarChart>
-              </ResponsiveContainer>
+              {selectedMeterIntervals.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500 text-xs">
+                  <Zap size={32} className="mb-2 opacity-30 text-brand" />
+                  <p className="font-bold">Aucune lecture granulaire enregistrée</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">Cliquez sur « Simulation VEE » pour acquérir des trames 15-min</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
+                  <BarChart data={selectedMeterIntervals.slice(0, 10).map((int, i) => ({
+                    time: format(new Date(int.timestamp), 'HH:mm'),
+                    val: int.status === 'valid' ? (int.consumption || 0) : 0,
+                    est: int.status === 'estimated' ? (int.consumption || 0) : 0
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{fontSize:9, fill:'#4b5563'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fontSize:8, fill:'#4b5563'}} />
+                    <Tooltip contentStyle={{backgroundColor:'#111', border:'none', borderRadius:'12px', fontSize:'10px'}} />
+                    <Bar dataKey="val" name="Lectures Réelles" fill="#FF6B35" radius={[4, 4, 0, 0]} barSize={20} />
+                    <Bar dataKey="est" name="Estimations VEE" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} fillOpacity={0.6} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
             <div className="mt-4 flex justify-center gap-6">
                <div className="flex items-center gap-2 text-[9px] font-bold text-gray-500 uppercase">
@@ -605,7 +669,7 @@ export const MdmsSection = ({
                   </div>
                   
                   <div className="grid grid-cols-1 gap-2">
-                    {decodedData.objects.map((obj: any, idx: number) => (
+                    {(decodedData.objects || []).map((obj: any, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-2xl transition-all group">
                         <div className="flex items-center gap-4">
                           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
@@ -672,8 +736,10 @@ const TopologyNode = ({ icon: Icon, label, status, count, sub, color }: any) => 
     <div className="flex-1 min-w-0">
       <div className="flex justify-between items-center mb-0.5">
         <span className="text-[10px] font-black text-white uppercase tracking-widest">{label}</span>
-        <span className={cn("text-[8px] font-black uppercase px-2 py-0.5 rounded", 
-          status === 'Online' || status === 'Connected' || status === 'Active' ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+        <span className={cn("text-[8px] font-black uppercase px-2 py-0.5 rounded border", 
+          status === 'EN LIGNE' || status === 'CONNECTÉ' || status === 'ACTIF' || status === 'OPÉRATIONNEL' || status === 'Online' || status === 'Connected' || status === 'Active' || status === 'Ready'
+            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+            : "bg-red-500/20 text-red-400 border-red-500/30"
         )}>{status}</span>
       </div>
       <div className="flex justify-between items-center">

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Bolt, RefreshCw, Printer, Sun } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Meter, User, Invoice } from '../types';
+import { useAmi } from '../context/AmiContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -30,7 +31,38 @@ export const CustomerDashboardSection = ({
   setSelectedInvoice,
   setIsPaymentModalOpen,
   handleGenerateInvoicePDF
-}: CustomerDashboardSectionProps) => (
+}: CustomerDashboardSectionProps) => {
+  const { tokens = [] } = useAmi();
+
+  const userMeters = useMemo(() => 
+    meters.filter(m => m.customerId === currentUser.associatedCustomerId),
+    [meters, currentUser]
+  );
+  const userMeterIds = useMemo(() => userMeters.map(m => m.id), [userMeters]);
+  const userTokens = useMemo(() => 
+    tokens.filter(t => userMeterIds.includes(t.meterId)),
+    [tokens, userMeterIds]
+  );
+
+  const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const chartData = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(now.getDate() - (6 - i));
+      const dayLabel = DAYS[d.getDay()];
+      const datePrefix = d.toISOString().slice(0, 10);
+      const dayKwh = userTokens
+        .filter(t => t.timestamp && new Date(t.timestamp).toISOString().slice(0, 10) === datePrefix)
+        .reduce((sum, t) => sum + (t.kwh || 0), 0);
+      return {
+        day: dayLabel,
+        val: Math.round(dayKwh * 10) / 10
+      };
+    });
+  }, [userTokens]);
+
+  return (
   <motion.div key="customer-dash" className="space-y-8">
     <div className="flex justify-between items-center">
       <div>
@@ -68,40 +100,60 @@ export const CustomerDashboardSection = ({
     </div>
 
     {/* Section Solaire Photovoltaïque & Net-Metering DERMS Client */}
-    <div className="glass-panel p-6 rounded-3xl border border-amber-500/30 bg-amber-500/5 relative overflow-hidden">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-            <Sun size={24} />
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-white uppercase tracking-tight">Net-Metering Solaire & Injection Réseau</h4>
-            <p className="text-xs text-amber-400 font-bold">Compteur Bidirectionnel Détecté (Producteur Réseau NIGELEC)</p>
-          </div>
-        </div>
-        <span className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold uppercase rounded-xl border border-amber-500/30">
-          DERMS Connecté
-        </span>
-      </div>
+    {(() => {
+      const userMeters = meters.filter(m => m.customerId === currentUser.associatedCustomerId);
+      const solarKwh = userMeters.reduce((acc, m) => acc + (m.solarExportKwh || m.solarInjection || 0), 0);
+      const solarCredit = Math.round(solarKwh * 59.35);
+      const co2Saved = (solarKwh * 0.72).toFixed(1);
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-          <span className="text-[10px] text-gray-400 uppercase font-bold">Énergie Photovoltaïque Injectée</span>
-          <p className="text-xl font-mono font-bold text-amber-400 mt-1">142.50 kWh</p>
-          <span className="text-[9px] text-emerald-400 font-bold">↑ Réinjecté ce mois-ci</span>
+      if (solarKwh <= 0) {
+        return (
+          <div className="glass-panel p-4 rounded-3xl border border-white/10 flex items-center justify-between text-xs text-gray-400">
+            <span className="flex items-center gap-2 font-bold text-gray-300">
+              <Sun size={18} className="text-gray-500" /> Mon Compteur NIGELEC : Tarif Standard (Sans Injection Solaire)
+            </span>
+            <span className="font-mono text-gray-400">Net-Metering: 0.00 kWh</span>
+          </div>
+        );
+      }
+
+      return (
+        <div className="glass-panel p-6 rounded-3xl border border-amber-500/30 bg-amber-500/5 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Sun size={24} />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-white uppercase tracking-tight">Net-Metering Solaire & Injection Réseau</h4>
+                <p className="text-xs text-amber-400 font-bold">Compteur Bidirectionnel Détecté (Producteur Réseau NIGELEC)</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold uppercase rounded-xl border border-amber-500/30">
+              DERMS Connecté
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+              <span className="text-xs text-gray-300 font-bold uppercase">Énergie Photovoltaïque Injectée</span>
+              <p className="text-xl font-mono font-bold text-amber-400 mt-1">{solarKwh.toFixed(2)} kWh</p>
+              <span className="text-[10px] text-emerald-400 font-bold">↑ Réinjecté au réseau NIGELEC</span>
+            </div>
+            <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+              <span className="text-xs text-gray-300 font-bold uppercase">Crédit Financier Généré</span>
+              <p className="text-xl font-mono font-bold text-emerald-400 mt-1">+{solarCredit.toLocaleString('fr-FR')} FCFA</p>
+              <span className="text-[10px] text-gray-400">Déduit sur la prochaine facturation</span>
+            </div>
+            <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
+              <span className="text-xs text-gray-300 font-bold uppercase">Bilan Carbone Évité</span>
+              <p className="text-xl font-mono font-bold text-cyan-400 mt-1">-{co2Saved} kg CO₂</p>
+              <span className="text-[10px] text-cyan-300 font-medium">Énergie Propre NIGELEC</span>
+            </div>
+          </div>
         </div>
-        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-          <span className="text-[10px] text-gray-400 uppercase font-bold">Crédit Financier Généré</span>
-          <p className="text-xl font-mono font-bold text-emerald-400 mt-1">+8 457 FCFA</p>
-          <span className="text-[9px] text-gray-400">Déduit automatiquement</span>
-        </div>
-        <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-          <span className="text-[10px] text-gray-400 uppercase font-bold">Bilan Carbone Évité</span>
-          <p className="text-xl font-mono font-bold text-cyan-400 mt-1">-102.6 kg CO₂</p>
-          <span className="text-[9px] text-cyan-300">Énergie Propre</span>
-        </div>
-      </div>
-    </div>
+      );
+    })()}
 
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
        <div className="glass-panel p-8 rounded-3xl border border-white/5">
@@ -133,15 +185,11 @@ export const CustomerDashboardSection = ({
           </div>
        </div>
 
-       <div className="glass-panel p-8 rounded-3xl border border-white/5">
-          <h4 className="font-bold text-lg mb-8">Ma Consommation (Simulée)</h4>
+        <div className="glass-panel p-8 rounded-3xl border border-white/5">
+          <h4 className="font-bold text-lg mb-8">Ma Consommation Journalière (kWh)</h4>
           <div className="h-[250px] w-full relative overflow-hidden" style={{ minHeight: '250px', minWidth: '0' }}>
-             <ResponsiveContainer width="100%" height={250} debounce={50}>
-                <AreaChart data={[
-                    { day: 'Lun', val: 5.2 }, { day: 'Mar', val: 4.8 }, { day: 'Mer', val: 7.5 },
-                    { day: 'Jeu', val: 6.2 }, { day: 'Ven', val: 8.5 }, { day: 'Sam', val: 12.0 },
-                    { day: 'Dim', val: 10.5 }
-                ]}>
+             <ResponsiveContainer width="100%" height={250} minWidth={0} debounce={50}>
+                <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.3}/>
@@ -159,4 +207,5 @@ export const CustomerDashboardSection = ({
        </div>
     </div>
   </motion.div>
-);
+  );
+};

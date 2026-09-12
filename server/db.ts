@@ -14,6 +14,11 @@ const pgPool = isEnterpriseMode ? new Pool({
 }) : null;
 
 const sqliteDb = !isEnterpriseMode ? new Database("ami_smart_meter.db") : null;
+if (sqliteDb) {
+  sqliteDb.pragma('journal_mode = WAL');
+  sqliteDb.pragma('synchronous = NORMAL');
+  sqliteDb.pragma('busy_timeout = 5000');
+}
 
 /**
  * Traduit de façon sécurisée les placeholders "?" en "$1, $2..." pour PostgreSQL
@@ -54,6 +59,32 @@ export const db = {
       await pgPool!.query(POSTGRES_SCHEMA);
     } else {
       sqliteDb!.exec(SQLITE_SCHEMA);
+      // Migration dynamique des colonnes manquantes
+      try {
+        const cols = (sqliteDb!.prepare("PRAGMA table_info(meters)").all() as any[]).map(c => c.name);
+        const migrations: [string, string][] = [
+          ['totalConsumption', 'REAL DEFAULT 0'],
+          ['current', 'REAL DEFAULT 0'],
+          ['frequency', 'REAL DEFAULT 50.0'],
+          ['powerFactor', 'REAL DEFAULT 0.98'],
+          ['voltageL2', 'REAL DEFAULT 0'],
+          ['voltageL3', 'REAL DEFAULT 0'],
+          ['currentL2', 'REAL DEFAULT 0'],
+          ['currentL3', 'REAL DEFAULT 0'],
+          ['powerL2', 'REAL DEFAULT 0'],
+          ['powerL3', 'REAL DEFAULT 0'],
+          ['lastTelemetrySync', 'TEXT'],
+          ['relayStatus', "TEXT DEFAULT 'CLOSED'"],
+        ];
+        for (const [col, def] of migrations) {
+          if (!cols.includes(col)) {
+            sqliteDb!.exec(`ALTER TABLE meters ADD COLUMN ${col} ${def};`);
+            console.log(`[DB] Colonne '${col}' ajoutée à la table meters.`);
+          }
+        }
+      } catch (e: any) {
+        console.error("[DB] Erreur migration meters:", e.message);
+      }
     }
   },
 

@@ -17,9 +17,10 @@ interface ShiftModalProps {
   shift: Shift | null;
   onOpenShift: (initialCash: number) => void;
   onCloseShift: (finalCash: number) => void;
+  onNewShift?: () => void;
 }
 
-export const ShiftModal = ({ isOpen, onClose, shift, onOpenShift, onCloseShift }: ShiftModalProps) => {
+export const ShiftModal = ({ isOpen, onClose, shift, onOpenShift, onCloseShift, onNewShift }: ShiftModalProps) => {
   const [cashInput, setCashInput] = useState<string>('');
   
   const handleAction = () => {
@@ -107,18 +108,25 @@ export const ShiftModal = ({ isOpen, onClose, shift, onOpenShift, onCloseShift }
                 </div>
              </div>
 
-             <button 
-              onClick={() => {
-                onClose();
-                // We'll let the user open a new shift via a separate flow or reset this
-              }}
-              className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm hover:bg-white/10 transition-all"
-             >
-               Fermer ce Rapport
-             </button>
+             <div className="flex flex-col sm:flex-row gap-3">
+               {onNewShift && (
+                 <button 
+                   onClick={() => onNewShift()}
+                   className="flex-1 btn-primary py-4 rounded-2xl font-black text-sm shadow-xl shadow-brand/20 flex items-center justify-center gap-2 cursor-pointer"
+                 >
+                   <Zap size={18} className="fill-current" /> + Ouvrir Nouvelle Session
+                 </button>
+               )}
+               <button 
+                 onClick={onClose}
+                 className="flex-1 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm hover:bg-white/10 transition-all cursor-pointer text-center"
+               >
+                 Fermer ce Rapport
+               </button>
+             </div>
              
-             <p className="text-[10px] text-center text-gray-600 font-bold uppercase tracking-widest">
-               ID SESSION: {shift.id}
+             <p className="text-[10px] text-center text-gray-500 font-bold uppercase tracking-widest font-mono">
+               ID SESSION: {shift.id} · ARRÊTÉ DE CAISSE CONFORME
              </p>
            </div>
         ) : (

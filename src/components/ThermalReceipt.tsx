@@ -59,7 +59,7 @@ export const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ token }) => (
 
     <div className="text-[10px] space-y-1 border-t border-black border-dashed pt-4">
       <p>ID Trans: {token.id}</p>
-      <p>SGC: 600600 | KRN: 2 | TI: 1</p>
+      <p>SGC: 600876 | KRN: 2 | EA: 07 | TI: 1</p>
       <p className="mt-4 text-center font-bold">MERCI POUR VOTRE ACHAT</p>
       <p className="text-center italic">Digitalisant l'énergie au Niger</p>
     </div>

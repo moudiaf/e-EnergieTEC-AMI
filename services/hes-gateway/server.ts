@@ -19,7 +19,11 @@ const OBIS_CODES: Record<string, { label: string, unit: string, factor: number, 
   "1.0.71.7.0.255": { label: "Courant Phase L3", unit: "A", factor: 0.1, hex: "0100470700ff" },
   "1.0.32.7.0.255": { label: "Tension Phase L1", unit: "V", factor: 0.1, hex: "0100200700ff" },
   "1.0.52.7.0.255": { label: "Tension Phase L2", unit: "V", factor: 0.1, hex: "0100340700ff" },
-  "1.0.72.7.0.255": { label: "Tension Phase L3", unit: "V", factor: 0.1, hex: "0100480700ff" }
+  "1.0.72.7.0.255": { label: "Tension Phase L3", unit: "V", factor: 0.1, hex: "0100480700ff" },
+  "0.0.96.11.0.255": { label: "Ouverture Capot Principal (Meter Cover)", unit: "FLAG", factor: 1.0, hex: "0000600b00ff" },
+  "0.0.96.11.1.255": { label: "Ouverture Cache-Bornes (Terminal Cover)", unit: "FLAG", factor: 1.0, hex: "0000600b01ff" },
+  "0.0.96.11.2.255": { label: "Détection Champ Magnétique (Aimant)", unit: "FLAG", factor: 1.0, hex: "0000600b02ff" },
+  "0.0.96.3.10.255": { label: "Statut Disjoncteur / Relais Coupure", unit: "STATE", factor: 1.0, hex: "000060030aff" }
 };
 
 /**
@@ -175,15 +179,13 @@ const decodeDLMSFrame = (hexFrame: string) => {
       }
     }
 
-    // Fallback de simulation si non présent ou si le format d'APDU n'est pas détecté
-    // Cela permet de continuer à alimenter l'interface de démo avec des données réalistes
-    const rawValue = Math.floor(Math.random() * 1000); 
+    // Si l'objet n'est pas présent dans la trame reçue : aucune génération aléatoire
     objects.push({
       obis: obisCode,
       name: meta.label,
-      value: (rawValue * meta.factor).toFixed(2),
+      value: null,
       unit: meta.unit,
-      status: 'SIMULATED'
+      status: 'NOT_PRESENT'
     });
   });
 
@@ -222,6 +224,16 @@ const tcpServer = net.createServer((socket) => {
 });
 
 // --- API de Service (Pour le MDMS / Diagnostic / Simulateur) ---
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'HEALTHY',
+    gateway: 'ONLINE',
+    tcpPort: TCP_PORT,
+    apiPort: API_PORT,
+    standard: 'IEC 62056 DLMS/COSEM'
+  });
+});
+
 app.post('/api/hes/decode', (req, res) => {
   const { frame } = req.body;
   if (!frame) return res.status(400).json({ error: "Trame manquante" });

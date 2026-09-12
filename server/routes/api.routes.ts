@@ -5,6 +5,8 @@ import { AuthController } from '../controllers/auth.controller';
 import { CustomerController } from '../controllers/customer.controller';
 import { MeterController } from '../controllers/meter.controller';
 import { STSController } from '../controllers/sts.controller';
+import { Vending2Controller } from '../controllers/vending2.controller';
+import { StatisticsController } from '../controllers/statistics.controller';
 import { auditService } from '../services/audit.service';
 import {
   AuditRepository,
@@ -15,6 +17,7 @@ import {
   IntervalDataRepository,
   MeterRepository
 } from '../repositories';
+import { requireRole } from '../middleware/auth';
 import {
   validateLogin,
   validateCustomerCreate,
@@ -31,6 +34,7 @@ const router = Router();
 
 // --- AUTH ---
 router.post("/login", validateLogin, AuthController.login);
+router.post("/auth/login", validateLogin, AuthController.login);
 
 // --- AUDITS & NOTIFICATIONS ---
 router.get("/audits", async (req, res) => {
@@ -66,31 +70,33 @@ router.get("/customers", CustomerController.getAllCustomers);
 router.get("/customers/:id", CustomerController.getCustomerById);
 router.post("/customers", validateCustomerCreate, CustomerController.createCustomer);
 router.put("/customers/:id", CustomerController.updateCustomer);
-router.delete("/customers/:id", CustomerController.deleteCustomer);
+router.delete("/customers/:id", requireRole(['admin']), CustomerController.deleteCustomer);
 
 // --- METERS ---
 router.get("/meters", MeterController.getAllMeters);
+router.get("/meters/:id", MeterController.getMeterById);
 router.post("/meters", validateMeterCreate, MeterController.registerMeter);
+router.put("/meters/:id", MeterController.updateMeter);
 router.post("/meters/:id/tamper", MeterController.tamperMeter);
 router.put("/meters/:id/lifecycle", MeterController.updateLifecycle);
-router.delete("/meters/:id", MeterController.deleteMeter);
+router.delete("/meters/:id", requireRole(['admin']), MeterController.deleteMeter);
 
 // --- DCUS ---
 router.get('/dcus', CustomerController.getAllDCUs);
 router.post('/dcus', validateDcuCreate, CustomerController.createDCU);
 router.put('/dcus/:id', CustomerController.updateDCU);
-router.delete('/dcus/:id', CustomerController.deleteDCU);
+router.delete('/dcus/:id', requireRole(['admin']), CustomerController.deleteDCU);
 
 // --- REGIONS ---
 router.get('/regions', CustomerController.getAllRegions);
 router.post('/regions', validateRegionCreate, CustomerController.createRegion);
 router.put('/regions/:id', CustomerController.updateRegion);
-router.delete('/regions/:id', CustomerController.deleteRegion);
+router.delete('/regions/:id', requireRole(['admin']), CustomerController.deleteRegion);
 
 // --- STS TOKENS & BILLING ---
-router.post("/tokens", validateTokenGenerate, STSController.generateToken);
+router.post("/tokens", requireRole(['admin', 'vendor']), validateTokenGenerate, STSController.generateToken);
 router.get("/tokens", STSController.getAllTokens);
-router.post("/billing/run", STSController.runBilling);
+router.post("/billing/run", requireRole(['admin', 'vendor']), STSController.runBilling);
 
 // --- INVOICES & PAYMENTS ---
 router.get("/invoices", STSController.getAllInvoices);
@@ -137,7 +143,7 @@ router.get("/users", async (req, res) => {
   }
 });
 
-router.delete("/users/:id", async (req, res) => {
+router.delete("/users/:id", requireRole(['admin']), async (req, res) => {
   try {
     await UserRepository.delete(req.params.id);
     res.json({ success: true });
@@ -155,7 +161,7 @@ router.get("/settings", async (req, res) => {
   }
 });
 
-router.post("/settings", async (req, res) => {
+router.post("/settings", requireRole(['admin']), async (req, res) => {
   try {
     const settings = req.body;
     for (const [key, value] of Object.entries(settings)) {
@@ -221,49 +227,60 @@ router.get("/analytics/energy-balance", async (req, res) => {
 });
 
 // --- SIMULATIONS ---
-router.post("/simulate/anomaly", MeterController.simulateAnomaly);
-router.post("/simulate/fraud", MeterController.simulateFraud);
+router.post("/simulate/anomaly", requireRole(['admin', 'tech']), MeterController.simulateAnomaly);
+router.post("/simulate/fraud", requireRole(['admin', 'tech']), MeterController.simulateFraud);
 
-router.post("/mdms/simulate-mass", async (req, res) => {
+router.post("/mdms/simulate-mass", requireRole(['admin', 'tech']), async (req, res) => {
   try {
-    const { count } = req.body;
-    const countValue = count || 96;
     const startTime = Date.now();
-
-    const meters = await MeterRepository.getOnlineIds();
+    const meterRows = await db.prepare("SELECT * FROM meters WHERE status = 'online'").all() as any[];
     
-    await db.transaction(async () => {
-      for (const meterId of meters) {
-        for (let i = 0; i < countValue; i++) {
-          const intervalTime = new Date(Date.now() - (i * 15 * 60000));
-          const consumption = (Math.random() * 0.5) + 0.1;
-          const voltage = 220 + (Math.random() * 20 - 10);
-          const current = (consumption * 1000) / voltage;
-          
-          const id = `INT-${intervalTime.getTime()}-${meterId}`;
-          await IntervalDataRepository.insert({
-            id,
-            meterId,
-            timestamp: intervalTime.toISOString(),
-            reading: 0,
-            consumption,
-            voltage,
-            current,
-            powerFactor: 0.95,
-            status: 'valid',
-            validationNotes: ''
-          });
-        }
+    for (const m of meterRows) {
+      // 1. Interrogation télémétrique DLMS réelle du compteur
+      try {
+        await vending2Service.readMeterValue(m.id, 'MDMS_INGEST');
+      } catch (err: any) {
+        console.warn(`[MDMS INGEST] Note: télérelève en direct pour ${m.id} : ${err.message}`);
       }
-    });
+
+      // 2. Récupération des données réelles fraîches après synchronisation
+      const fresh = (await db.prepare("SELECT * FROM meters WHERE id = ?").get(m.id)) as any || m;
+      const intervalTime = new Date();
+      const voltage = fresh.voltage || (fresh.phaseType === 'triphase' ? 400.0 : 230.0);
+      const current = fresh.current || 0.0;
+      const reading = fresh.totalConsumption || 0.0;
+      const id = `INT-${intervalTime.getTime()}-${fresh.id}-${Math.floor(Math.random() * 1000)}`;
+      
+      // 3. Calcul du delta de consommation réel par rapport au dernier relevé
+      const lastInterval = await db.prepare(
+        "SELECT reading FROM interval_data WHERE meterId = ? ORDER BY timestamp DESC LIMIT 1"
+      ).get(fresh.id) as any;
+      const prevReading = lastInterval ? lastInterval.reading : reading;
+      const deltaConsumption = (reading >= prevReading) ? +(reading - prevReading).toFixed(3) : 0.0;
+      
+      await IntervalDataRepository.insert({
+        id,
+        meterId: fresh.id,
+        timestamp: intervalTime.toISOString(),
+        reading,
+        consumption: deltaConsumption,
+        voltage,
+        current,
+        powerFactor: fresh.powerFactor || 0.98,
+        status: 'valid',
+        validationNotes: 'Ingestion DLMS certifiée en direct du compteur'
+      });
+    }
 
     const durationMs = Date.now() - startTime;
     res.json({ 
       success: true, 
-      message: `Simulation terminée: ${meters.length * countValue} lectures générées pour ${meters.length} compteurs.`,
+      message: `Ingestion MDMS DLMS temps-réel enregistrée pour ${meterRows.length} compteur(s).`,
+      count: meterRows.length,
       durationMs 
     });
   } catch (err: any) {
+    console.error("[MDMS] Erreur ingestion réelle:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -293,6 +310,77 @@ router.post("/hes/decode", async (req, res) => {
   }
 });
 
-router.post("/security/rotate-keys", STSController.rotateKeys);
+router.post("/security/rotate-keys", requireRole(['admin']), STSController.rotateKeys);
+
+// --- KMS-HSM STS BRIDGE ---
+router.post("/kms/generate-token", async (req, res) => {
+  try {
+    const kmsRes = await fetch("http://localhost:5000/api/kms/generate-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body)
+    });
+    if (!kmsRes.ok) {
+      const err = await kmsRes.json().catch(() => ({}));
+      return res.status(kmsRes.status).json(err);
+    }
+    const data = await kmsRes.json();
+    res.json(data);
+  } catch (err: any) {
+    console.error("[KMS Proxy] Erreur de communication avec le KMS-HSM:", err.message);
+    res.status(503).json({
+      success: false,
+      error: "Service KMS-HSM certifié (Port 5000) inaccessible. Aucune génération non-authentique autorisée.",
+      details: err.message
+    });
+  }
+});
+
+// --- VENDING2 API INTEGRATION ---
+router.post("/v1/vending2/recharge", requireRole(['admin', 'vendor']), Vending2Controller.recharge);
+router.post("/v1/vending2/token", requireRole(['admin', 'vendor', 'tech']), Vending2Controller.generateToken);
+router.get("/v1/vending2/transactions", requireRole(['admin', 'vendor', 'tech', 'auditor']), Vending2Controller.getTransactions);
+router.get("/v1/vending2/transactions/:id", requireRole(['admin', 'vendor', 'tech', 'auditor']), Vending2Controller.getTransactionById);
+router.get("/v1/vending2/health", requireRole(['admin', 'tech']), Vending2Controller.checkHealth);
+router.post("/v1/vending2/read-telemetry", requireRole(['admin', 'tech']), Vending2Controller.readTelemetry);
+router.post("/v1/vending2/read-region", requireRole(['admin', 'tech']), Vending2Controller.readRegion);
+router.post("/v1/vending2/relay-control", requireRole(['admin', 'tech']), Vending2Controller.relayControl);
+router.get("/v1/vending2/record/:flowNo", requireRole(['admin', 'vendor', 'tech', 'auditor']), Vending2Controller.getRecordByFlowNo);
+router.post("/v1/vending2/clock-sync", requireRole(['admin', 'tech']), Vending2Controller.syncClock);
+
+import { FraudController } from '../controllers/fraud.controller';
+import { MdmsController } from '../controllers/mdms.controller';
+import { TouTariffController } from '../controllers/tou-tariff.controller';
+import { MobilePaymentController } from '../controllers/mobile-payment.controller';
+import { KmsKeyRotationController } from '../controllers/kms-key-rotation.controller';
+
+// ─── Module Anti-Fraude & Revenue Assurance ──────────
+router.post("/v1/fraud/evaluate", requireRole(['admin', 'tech', 'auditor']), FraudController.evaluateMeter);
+router.post("/v1/fraud/clear-tamper", requireRole(['admin', 'tech']), FraudController.generateClearTamperToken);
+router.get("/v1/fraud/alerts", requireRole(['admin', 'tech', 'auditor']), FraudController.getFraudAlerts);
+
+// ─── Module Bilan Énergétique MDMS & Pertes Réseau ──────────
+router.post("/v1/mdms/energy-balance", requireRole(['admin', 'manager', 'tech', 'auditor']), MdmsController.getDcuEnergyBalance);
+router.get("/v1/mdms/network-summary", requireRole(['admin', 'manager', 'tech', 'auditor']), MdmsController.getNationalSummary);
+
+// ─── Module Tarification Horaire TOU & Jetons de Tarif STS (Subclass 2) ──────────
+router.get("/v1/tariffs/tou-schedule", requireRole(['admin', 'manager', 'tech', 'vendor', 'auditor']), TouTariffController.getSchedule);
+router.post("/v1/tariffs/generate-tariff-token", requireRole(['admin', 'vendor', 'tech']), TouTariffController.generateTariffToken);
+
+// ─── Module Paiement Mobile Money (+227 Airtel/Moov) & SMS/WhatsApp Notification ──────────
+router.post("/v1/payments/mobile-push", requireRole(['admin', 'vendor', 'customer']), MobilePaymentController.processPayment);
+router.get("/v1/payments/history/:meterId", requireRole(['admin', 'vendor', 'customer', 'auditor']), MobilePaymentController.getPaymentHistory);
+
+// ─── Module Sécurité KMS & Rotation des Clés (Key Change Tokens KCT / Subclass 3) ──────────
+router.post("/v1/kms/rotate-keys-token", requireRole(['admin', 'tech']), KmsKeyRotationController.rotateKeysToken);
+
+// ─── Module Statistiques & Rapports AMI (Consommation, Analyse, Finance) ──────────
+router.get("/statistics/consumption-matrix", StatisticsController.getConsumptionMatrix);
+router.get("/statistics/meter-analysis", StatisticsController.getMeterAnalysis);
+router.get("/statistics/financial-summary", StatisticsController.getFinancialSummary);
+
+router.get("/v1/statistics/consumption-matrix", StatisticsController.getConsumptionMatrix);
+router.get("/v1/statistics/meter-analysis", StatisticsController.getMeterAnalysis);
+router.get("/v1/statistics/financial-summary", StatisticsController.getFinancialSummary);
 
 export default router;

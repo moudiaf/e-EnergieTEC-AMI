@@ -22,27 +22,28 @@ export const customerCreateSchema = z.object({
 
 export const meterCreateSchema = z.object({
   id: z.string().trim().min(1, "ID du compteur requis"),
-  serialNumber: z.string().trim().min(1, "Numéro de série du compteur requis"),
+  serialNumber: z.string().trim().optional(),
   location: z.string().trim().optional(),
-  type: z.enum(['domestic', 'commercial', 'industrial', 'haute_tension']).default('domestic'),
+  type: z.enum(['domestic', 'social', 'commercial', 'industrial', 'haute_tension', 'eclairage_public']).default('domestic'),
   credit: z.number().nonnegative().optional().default(0),
-  status: z.enum(['online', 'warning', 'offline']).optional().default('online'),
+  status: z.enum(['online', 'warning', 'offline', 'active', 'inactive']).optional().default('online'),
   dcuId: z.string().trim().optional().nullable(),
   phaseType: z.enum(['monophase', 'triphase']).optional().default('monophase'),
   supplier: z.string().trim().optional()
-});
+}).passthrough();
 
 export const tokenGenerateSchema = z.object({
   meterId: z.string().trim().min(1, "ID du compteur requis"),
-  kwh: z.number().optional(),
-  type: z.enum(['recharge', 'clear-credit', 'clear-tamper', 'key-change'])
-}).refine(data => {
+  kwh: z.number().optional().default(0),
+  amount: z.number().optional(),
+  type: z.enum(['recharge', 'clear-credit', 'clear-tamper', 'key-change']).default('recharge')
+}).passthrough().refine(data => {
   if (data.type === 'recharge') {
-    return data.kwh !== undefined && data.kwh > 0;
+    return (data.kwh !== undefined && data.kwh >= 0) || (data.amount !== undefined && data.amount > 0);
   }
   return true;
 }, {
-  message: "La valeur en kWh doit être supérieure à 0 pour une recharge",
+  message: "Le montant ou la valeur en kWh doit être supérieur à 0 pour une recharge",
   path: ["kwh"]
 });
 

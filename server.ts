@@ -22,7 +22,10 @@ import { db } from './server/db';
 import apiRouter from './server/routes/api.routes';
 import { requireAuth } from './server/middleware/auth';
 import { stsService } from './server/services/sts.service';
+import { vending2Service } from './server/services/vending2.service';
 import { PaymentRepository } from './server/repositories';
+import { StreamController } from './server/controllers/stream.controller';
+import { connectivityWatchdogService } from './server/services/connectivity-watchdog.service';
 
 // Initialize Database Function
 async function initDb() {
@@ -153,22 +156,14 @@ async function initDb() {
     }
   }
 
-  // Always ensure regions and DCUs are synchronized
-  console.log('[SYS] Synchronisation des régions et DCUs...');
+  // Always ensure regions are synchronized
+  console.log('[SYS] Synchronisation des régions...');
   const sqlInsertRegion = isEnterpriseMode 
     ? "INSERT INTO regions(id, superiorRegionId, areaName, label, principal, contact, email, status, blazon) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING"
     : "INSERT OR IGNORE INTO regions(id, superiorRegionId, areaName, label, principal, contact, email, status, blazon) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
   const insertRegion = db.prepare(sqlInsertRegion);
   for (const r of seedRegions) {
     await insertRegion.run(r.id, r.superiorRegionId, r.areaName, r.label, r.principal, r.contact, r.email, r.status, r.blazon);
-  }
-
-  const sqlInsertDCU = isEnterpriseMode
-    ? "INSERT INTO dcus(id, name, regionId, status, ipAddress, macAddress, firmware, lastPing, performance, latitude, longitude, modemType, signalStrength, connectedMeters, cpuUsage, memUsage) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING"
-    : "INSERT OR IGNORE INTO dcus(id, name, regionId, status, ipAddress, macAddress, firmware, lastPing, performance, latitude, longitude, modemType, signalStrength, connectedMeters, cpuUsage, memUsage) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-  const insertDCU = db.prepare(sqlInsertDCU);
-  for (const d of seedDCUs) {
-    await insertDCU.run(d.id, d.name, d.regionId, d.status, d.ipAddress, d.macAddress, d.firmware, d.lastPing, d.performance, d.lat, d.lng, d.modemType, d.signal, d.meters, 12.5, 38.4);
   }
 
   // =======================================================
@@ -310,34 +305,47 @@ async function startServer() {
 
   const generalLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, 
-    max: 500, 
+    max: 5000, 
     message: { error: "Trop de requêtes. Protection DoS active.", code: "API_RATE_LIMIT" },
-
     standardHeaders: true,
     legacyHeaders: false,
+    skip: (req) => {
+      const ip = req.ip || req.socket.remoteAddress || '';
+      return ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1' || ip.startsWith('127.');
+    }
   });
 
   const authLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 5,
+    max: 30,
     message: { error: "Tentatives de connexion excessives. IP temporairement bloquée.", code: "AUTH_RATE_LIMIT" },
     standardHeaders: true,
     legacyHeaders: false,
   });
 
-  // Middleware global pour désactiver la page d'avertissement Ngrok et autoriser CORS
-  app.use((_req, res, next) => {
+  // Middleware global pour désactiver la page d'avertissement Ngrok et autoriser CORS complet (Preflight OPTIONS)
+  app.use((req, res, next) => {
     res.setHeader("ngrok-skip-browser-warning", "true");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
     next();
   });
 
   app.use(express.json());
   
-  // Appliquer les limiteurs AVANT les routes
-  app.use("/api/login", authLimiter);
-  app.use("/api/", generalLimiter);
+  // Health Check Endpoint
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'HEALTHY',
+      service: 'e-EnergieTEC Core HES/MDMS',
+      port: PORT,
+      timestamp: new Date().toISOString()
+    });
+  });
 
   app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
@@ -363,7 +371,7 @@ async function startServer() {
 
   app.post("/api/forgot-password", async (req, res) => {
     try {
-      const { identifier, newPassword } = req.body;
+      const { identifier, newPassword, resetToken } = req.body;
       if (!identifier) {
         return res.status(400).json({ success: false, message: 'Identifiant requis' });
       }
@@ -376,12 +384,28 @@ async function startServer() {
       }
 
       if (newPassword) {
+        if (!resetToken) {
+          return res.status(401).json({ success: false, message: 'Jeton de réinitialisation sécurisé (resetToken) manquant.' });
+        }
+        try {
+          const decoded = jwt.verify(resetToken, JWT_SECRET) as any;
+          if (decoded.action !== 'password_reset' || decoded.userId !== user.id) {
+            return res.status(403).json({ success: false, message: 'Jeton de réinitialisation invalide ou non attribué à cet utilisateur.' });
+          }
+        } catch (jwtErr) {
+          return res.status(403).json({ success: false, message: 'Jeton de réinitialisation expiré ou corrompu.' });
+        }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await db.prepare("UPDATE users SET password = ? WHERE id = ?").run(hashedPassword, user.id);
         return res.json({ success: true, message: 'Mot de passe mis à jour avec succès' });
       }
 
-      res.json({ success: true, message: 'Identifiant vérifié avec succès' });
+      // Step 1: Identifier verified, issue a short-lived resetToken (15m)
+      const tokenPayload = { userId: user.id, username: user.username, action: 'password_reset' };
+      const generatedResetToken = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '15m' });
+
+      res.json({ success: true, resetToken: generatedResetToken, message: 'Identifiant vérifié avec succès' });
     } catch (err: any) {
       res.status(500).json({ success: false, message: err.message || 'Erreur du serveur' });
     }
@@ -411,7 +435,18 @@ async function startServer() {
 
   app.post("/api/public/tokens", async (req, res) => {
     try {
-      const { meterId, kwh, type } = req.body;
+      const { meterId, kwh, type, paymentReference } = req.body;
+
+      // Verification constraint: Public generation requires a valid payment reference or auth header
+      const authHeader = req.headers['authorization'];
+      const hasAuthToken = authHeader && authHeader.startsWith('Bearer ');
+
+      if (!hasAuthToken && (!paymentReference || paymentReference.trim().length < 5)) {
+        return res.status(400).json({ 
+          error: "Paiement requis - La référence de transaction Mobile Money / Caisse est obligatoire pour la génération publique de jeton." 
+        });
+      }
+
       const { token, tid, rawToken } = await stsService.generateToken(meterId, kwh, type);
       const tokenData = { ...req.body, token, tid, rawToken };
       const resolvedId = await stsService.persistToken(tokenData);
@@ -440,6 +475,9 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // --- FLUX TEMPS RÉEL (SSE WATCHDOG STREAM) ---
+  app.get("/api/stream/events", StreamController.subscribe);
 
   // --- MODULAR API ROUTES ---
   app.use('/api', requireAuth, apiRouter);
@@ -595,6 +633,36 @@ async function startServer() {
     }
   }
 
+  // =================================================================
+  // TÂCHE DE FOND AUTOMATIQUE : COLLECTE GPRS PÉRIODIQUE 5 MIN (300s)
+  // Conforme au registre OBIS Heartbeat Period (0.0.51.2.1.255)
+  // =================================================================
+  const GPRS_AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300 000 ms)
+  setInterval(async () => {
+    try {
+      console.log('[GPRS-HES DAEMON] 📡 Lancement de la collecte automatique GPRS 5-min (Heartbeat Sync)...');
+      const meters = await db.prepare("SELECT id FROM meters").all() as any[];
+      let onlineCount = 0;
+      let offlineCount = 0;
+      for (const m of meters) {
+        try {
+          const res = await vending2Service.readMeterValue(m.id, 'GPRS_AUTO_DAEMON_5MIN');
+          if (res && res.code === 200) {
+            onlineCount++;
+          } else {
+            offlineCount++;
+          }
+        } catch (err: any) {
+          offlineCount++;
+          console.error(`[GPRS-HES DAEMON] Échec sync pour ${m.id}: ${err.message}`);
+        }
+      }
+      console.log(`[GPRS-HES DAEMON] 📡 Collecte GPRS 5-min terminée : ${onlineCount} en ligne, ${offlineCount} hors-ligne.`);
+    } catch (e: any) {
+      console.error(`[GPRS-HES DAEMON] Erreur tâche de fond: ${e.message}`);
+    }
+  }, GPRS_AUTO_SYNC_INTERVAL_MS);
+
   // Forcer le service du manifest PWA avec en-tête JSON et CORS
   app.get("/manifest.webmanifest", (_req, res) => {
     res.setHeader("Content-Type", "application/manifest+json");
@@ -647,6 +715,8 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    // Démarrage de l'automate de surveillance continue Watchdog
+    connectivityWatchdogService.start();
   });
   setInterval(() => {}, 100000);
 }

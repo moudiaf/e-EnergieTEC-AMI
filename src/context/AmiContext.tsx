@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Customer, Meter, Token, Section, Tariff, Alert, Region, TariffTier, 
   Audit, User as AppUser, Invoice, Ticket, Payment, AlertRule, DCU, Shift, EnergyBalance 
@@ -173,8 +173,8 @@ interface AmiContextType {
   setRechargeAmount: React.Dispatch<React.SetStateAction<number>>;
   selectedChannel: 'Orange' | 'Airtel' | 'NITA' | 'AMANA' | 'CASH' | 'AGENCY';
   setSelectedChannel: React.Dispatch<React.SetStateAction<'Orange' | 'Airtel' | 'NITA' | 'AMANA' | 'CASH' | 'AGENCY'>>;
-  alertsTab: 'realtime' | 'history' | 'rules' | 'simulation';
-  setAlertsTab: React.Dispatch<React.SetStateAction<'realtime' | 'history' | 'rules' | 'simulation'>>;
+  alertsTab: 'alerts' | 'rules' | 'realtime' | 'history' | 'simulation';
+  setAlertsTab: React.Dispatch<React.SetStateAction<'alerts' | 'rules' | 'realtime' | 'history' | 'simulation'>>;
 
   isForgotPasswordModalOpen: boolean;
   setIsForgotPasswordModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -228,8 +228,11 @@ interface AmiContextType {
   handleGenerateToken: (type?: 'recharge' | 'key-change' | 'clear-credit' | 'clear-tamper' | 'payment-mode') => Promise<void>;
   handlePrintReceipt: (token: Token) => void;
   handleGenerateInvoicePDF: (inv: Invoice) => void;
+  handleReadTelemetry: (meterNo: string) => Promise<any>;
+  handleReadRegionTelemetry: (regionId: string) => Promise<any>;
   handleSaveSettings: (newSettings: any) => Promise<void>;
   handleRotateKeys: () => Promise<void>;
+  handleSyncClock: (meterId: string, customTime?: string) => Promise<any>;
 }
 
 const AmiContext = createContext<AmiContextType | undefined>(undefined);
@@ -269,8 +272,21 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isReplacementModalOpen, setIsReplacementModalOpen] = useState(false);
   const [isLoadSheddingModalOpen, setIsLoadSheddingModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
-  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
-  const [pastShifts, setPastShifts] = useState<Shift[]>([]);
+  const [currentShift, setCurrentShift] = useState<Shift | null>(() => {
+    try {
+      const saved = localStorage.getItem('ami_current_shift');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [pastShifts, setPastShifts] = useState<Shift[]>(() => {
+    try {
+      const saved = localStorage.getItem('ami_past_shifts');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingMeter, setEditingMeter] = useState<Meter | null>(null);
@@ -304,7 +320,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedMeterId, setSelectedMeterId] = useState('');
   const [rechargeAmount, setRechargeAmount] = useState(0);
   const [selectedChannel, setSelectedChannel] = useState<'Orange' | 'Airtel' | 'NITA' | 'AMANA' | 'CASH' | 'AGENCY'>('CASH');
-  const [alertsTab, setAlertsTab] = useState<'realtime' | 'history' | 'rules' | 'simulation'>('realtime');
+  const [alertsTab, setAlertsTab] = useState<'alerts' | 'rules' | 'realtime' | 'history' | 'simulation'>('alerts');
 
   // Dynamic Navigation Items based on user role
   const navItems = useMemo(() => {
@@ -363,8 +379,29 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currentUser]);
 
+  // Synchronisation sessions de caisse en stockage local persistant
+  useEffect(() => {
+    try {
+      if (currentShift) {
+        localStorage.setItem('ami_current_shift', JSON.stringify(currentShift));
+      } else {
+        localStorage.removeItem('ami_current_shift');
+      }
+    } catch {}
+  }, [currentShift]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('ami_past_shifts', JSON.stringify(pastShifts));
+    } catch {}
+  }, [pastShifts]);
+
+  const isFetchingRef = useRef(false);
+
   // Fetch all frontend data from Express server
   const fetchData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       const safeJson = async (fetchPromise: Promise<Response>) => {
         try {
@@ -463,6 +500,8 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (err) {
       console.error('Fetch error:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [authFetch, setMeters, setCustomers, setRegions, setAlerts, setAudits, setInvoices, setTickets, setPayments, setAlertRules, setMdmsStats, setSelectedMeterIntervals, setDcus, setUsers, setAnalyticsTrends, setAnalyticsDist, setNotifications, setEnergyBalance, setTariffs, setTokens, setSettings]);
 
@@ -487,6 +526,49 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return () => clearInterval(interval);
     }
   }, [isLoggedIn, fetchData]);
+
+  // Surveillance automatique en temps réel via le flux SSE Watchdog
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource('/api/stream/events');
+
+      eventSource.addEventListener('METER_STATUS_CHANGED', (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[WATCHDOG SSE] Événement reçu:', data);
+
+          setMeters(prev => prev.map(m => m.id === data.meterId ? {
+            ...m,
+            status: data.status,
+            lastTelemetrySync: data.lastTelemetrySync
+          } : m));
+
+          if (data.status === 'offline') {
+            addToast(`⚠️ Compteur ${data.meterId} basculé HORS-LIGNE (Inactivité détectée)`, 'info');
+          } else if (data.status === 'online') {
+            addToast(`🟢 Compteur ${data.meterId} rétabli EN LIGNE (Signal actif)`, 'success');
+          }
+        } catch (e) {
+          console.error('[WATCHDOG SSE] Erreur parsing:', e);
+        }
+      });
+
+      eventSource.onerror = () => {
+        // Reconnexion automatique gérée par le navigateur
+      };
+    } catch (err) {
+      console.error('[WATCHDOG SSE] Erreur EventSource:', err);
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [isLoggedIn, addToast, setMeters]);
 
   useEffect(() => {
     if (isLoggedIn && currentUser && currentSection === 'dashboard') {
@@ -551,14 +633,24 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleResetPassword = async (identifier: string, newPassword?: string): Promise<boolean> => {
     try {
+      const storedResetToken = sessionStorage.getItem(`reset_token_${identifier}`);
+      const bodyPayload: any = { identifier, newPassword };
+      if (newPassword && storedResetToken) {
+        bodyPayload.resetToken = storedResetToken;
+      }
+
       const res = await fetch(getApiUrl('/api/forgot-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, newPassword })
+        body: JSON.stringify(bodyPayload)
       });
       const result = await res.json();
       if (result.success) {
+        if (result.resetToken) {
+          sessionStorage.setItem(`reset_token_${identifier}`, result.resetToken);
+        }
         if (newPassword) {
+          sessionStorage.removeItem(`reset_token_${identifier}`);
           addToast('Mot de passe réinitialisé avec succès !', 'success');
         } else {
           addToast('Compte identifié avec succès.', 'info');
@@ -568,18 +660,8 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast(result.message || 'Identifiant introuvable', 'error');
         return false;
       }
-    } catch (err) {
-      const clean = identifier.includes('@') ? identifier.split('@')[0] : identifier;
-      const validMockUsers = ['admin', 'tech', 'auditor', 'vendor', 'client1', 'client2'];
-      if (validMockUsers.includes(clean.toLowerCase())) {
-        if (newPassword) {
-          addToast('Mot de passe mis à jour (Mode démo)', 'success');
-        } else {
-          addToast('Compte identifié (Mode démo)', 'info');
-        }
-        return true;
-      }
-      addToast('Utilisateur non trouvé', 'error');
+    } catch (err: any) {
+      addToast(err.message || 'Erreur lors de la réinitialisation du mot de passe', 'error');
       return false;
     }
   };
@@ -590,7 +672,21 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const creditToTransfer = oldMeter ? oldMeter.credit : 0;
       const customerId = oldMeter ? oldMeter.customerId : '';
 
-      const randomToken = Array.from({ length: 5 }, () => Math.floor(1000 + Math.random() * 9000)).join('-');
+      // Générer le vrai jeton de transfert STS via KMS
+      let transferToken = '';
+      try {
+        const kmsRes = await fetch('http://localhost:5000/api/kms/generate-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meterId: newMeterId, amount: creditToTransfer, type: '0', krn: '2', ti: '1' })
+        });
+        if (kmsRes.ok) {
+          const kmsData = await kmsRes.json();
+          transferToken = kmsData.token;
+        }
+      } catch (e) {
+        console.error('KMS Token Transfer Error:', e);
+      }
 
       setMeters(prev => prev.map(m => {
         if (m.id === oldMeterId) {
@@ -605,7 +701,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addToast(`Remplacement effectué ! Solde de ${creditToTransfer.toFixed(2)} kWh transféré vers ${newMeterId}`, 'success');
       logAudit('METER_REPLACEMENT', `Remplacement compteur ${oldMeterId} -> ${newMeterId} avec transfert solde ${creditToTransfer.toFixed(2)} kWh`, newMeterId);
 
-      return { success: true, transferToken: randomToken, creditTransferred: creditToTransfer };
+      return { success: true, transferToken, creditTransferred: creditToTransfer };
     } catch (err: any) {
       addToast('Erreur lors du remplacement du compteur', 'error');
       return { success: false };
@@ -735,7 +831,9 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     e.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const meterData: any = Object.fromEntries(formData.entries());
-    meterData.subscribedPower = parseFloat(meterData.subscribedPower);
+    if (meterData.subscribedPower) meterData.subscribedPower = parseFloat(meterData.subscribedPower);
+    if (meterData.credit !== undefined) meterData.credit = parseFloat(meterData.credit);
+    if (meterData.totalConsumption !== undefined) meterData.totalConsumption = parseFloat(meterData.totalConsumption);
     if (meterData.latitude) meterData.latitude = parseFloat(meterData.latitude);
     if (meterData.longitude) meterData.longitude = parseFloat(meterData.longitude);
 
@@ -743,19 +841,27 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (editingMeter) {
         const res = await authFetch(`/api/meters/${editingMeter.id}`, {
           method: 'PUT',
-          body: JSON.stringify(meterData)
+          body: JSON.stringify({
+            ...meterData,
+            serialNumber: meterData.serialNumber || editingMeter.serialNumber || meterData.id
+          })
         });
         if (res.ok) {
           addToast('Compteur mis à jour avec succès', 'success');
           fetchData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          addToast(`Erreur: ${errData.message || 'Échec de la mise à jour'}`, 'error');
         }
       } else {
-        const newMeter: Meter = {
-          id: meterData.id || `M-${Math.floor(100000 + Math.random() * 900000)}`,
+        const meterId = meterData.id || `M-${Math.floor(100000 + Math.random() * 900000)}`;
+        const newMeter: any = {
+          id: meterId,
+          serialNumber: meterData.serialNumber || meterId,
           ...meterData,
-          status: 'active',
+          status: meterData.status || 'online',
           lastReading: new Date().toISOString().split('T')[0],
-          totalConsumption: 0
+          totalConsumption: meterData.totalConsumption || 0
         };
         const res = await authFetch('/api/meters', {
           method: 'POST',
@@ -764,6 +870,9 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.ok) {
           addToast('Compteur créé avec succès', 'success');
           fetchData();
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          addToast(`Erreur: ${errData.message || 'Échec de la création'}`, 'error');
         }
       }
     } catch (error) {
@@ -1061,62 +1170,65 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const handleSimulateTamper = async () => {
-    const onlineMeters = meters.filter(m => m.status === 'online');
-    if (onlineMeters.length === 0) {
-      addToast('Aucun compteur en ligne disponible pour la simulation', 'error');
-      return;
+    try {
+      addToast('Scan de l\'intégrité matérielle DLMS en cours...', 'info');
+      await fetchData();
+      const tamperedMeters = meters.filter(m => m.tamperStatus === 'tampered');
+      if (tamperedMeters.length > 0) {
+        addToast(`⚠️ Fraude détectée sur ${tamperedMeters.length} compteur(s).`, 'error');
+      } else {
+        addToast('✅ Intégrité matérielle vérifiée : Aucun compteur saboté (0 Fraude).', 'success');
+      }
+    } catch (err: any) {
+      addToast(`Erreur d'audit matériel : ${err.message}`, 'error');
     }
-    const victim = onlineMeters[Math.floor(Math.random() * onlineMeters.length)];
-    handleTriggerFraud({ id: 'tamper', name: 'TAMPER (Ouverture Capot)', message: 'Ouverture de capot détectée via DLMS Case-Open bit.' }, victim.id);
   };
 
   const handleTriggerFraud = async (scenario: any, meterId: string) => {
-    try {
-      const res = await authFetch('/api/simulate/fraud', {
-        method: 'POST',
-        body: JSON.stringify({
-          meterId,
-          type: scenario.id,
-          message: scenario.message
-        })
-      });
-
-      if (res.ok) {
-        addToast(`ALERTE CRITIQUE : ${scenario.name} simulée sur ${meterId}`, 'error');
-        fetchData();
-        setIsFraudModalOpen(false);
-      }
-    } catch (err) {
-      addToast('Erreur lors de la simulation de fraude', 'error');
-    }
+    addToast('🔒 Mode Production Pure NIGELEC : Les simulations de fraude sont désactivées. Seule la détection physique DLMS est active.', 'info');
+    setIsFraudModalOpen(false);
   };
 
   const handleSimulateAnomaly = async (meterId: string) => {
-    try {
-      await authFetch('/api/simulate/anomaly', {
-        method: 'POST',
-        body: JSON.stringify({ meterId })
-      });
-      addToast(`Anomalie simulée pour le compteur ${meterId}`, 'info');
-      fetchData();
-    } catch (err) {
-      addToast('Erreur lors de la simulation d\'anomalie', 'error');
-    }
+    addToast('🔒 Mode Production Pure NIGELEC : Les simulations d\'anomalies sont désactivées.', 'info');
   };
 
   const handleResetTamper = async (meterId: string, alertId: string) => {
-    const techCode = window.prompt("🔐 SÉCURITÉ NIGELEC - LEVÉE DE DOUTE\n\nSaisissez le Code Technicien pour réinitialiser le compteur :\n(Indice: 2026)");
+    const techCode = window.prompt("🔐 SÉCURITÉ NIGELEC - LEVÉE DE DOUTE & EFFACEMENT SABOTAGE\n\nSaisissez le Code Technicien pour générer le Jeton Usine Clear Tamper (Subclass 5) :\n(Code d'habilitation: 2026)");
 
     if (techCode === '2026') {
-      setMeters(prev => prev.map(m => m.id === meterId ? { ...m, status: 'online', tamperStatus: 'clear' } : m));
-      setAlerts(prev => prev.filter(a => a.id !== alertId));
+      try {
+        const res = await authFetch('/api/v1/fraud/clear-tamper', {
+          method: 'POST',
+          body: JSON.stringify({ meterId })
+        });
+        const data = await res.json();
 
-      await logAudit('RESET SÉCURITÉ', `Levée de doute confirmée sur le compteur ${meterId}. Réseau rétabli.`);
-      sendSmsNotification("90xxxxxx", `Compteur ${meterId} réinitialisé avec succès. Relais refermé. Réseau OK.`, 'info');
-      addToast('Compteur rétabli avec succès. Relais refermé.', 'success');
+        if (data.success && data.token) {
+          setMeters(prev => prev.map(m => m.id === meterId ? { ...m, status: 'online', tamperStatus: 'clear', mlFraudScore: 0 } : m));
+          setAlerts(prev => prev.filter(a => a.id !== alertId));
+
+          setGeneratedToken({
+            code: data.token,
+            amount: 0,
+            units: 0,
+            customerName: 'Dépêche Technique NIGELEC',
+            meterNumber: meterId,
+            date: new Date().toLocaleDateString('fr-FR'),
+            time: new Date().toLocaleTimeString('fr-FR')
+          });
+
+          await logAudit('RESET_TAMPER_SUCCESS', `Jeton usine Clear Tamper généré pour ${meterId} : ${data.token}`);
+          addToast(`🔑 Jeton d'effacement sabotage généré : ${data.token}`, 'success');
+        } else {
+          addToast(`Erreur génération jeton Clear Tamper: ${data.message || 'Échec API'}`, 'error');
+        }
+      } catch (e: any) {
+        addToast(`Erreur réseau : ${e.message}`, 'error');
+      }
     } else if (techCode !== null) {
-      addToast('Code Technicien Invalide. Action annulée et logguée.', 'error');
-      await logAudit('ALERTE INTRUSION', `Tentative échouée de reset sur le compteur ${meterId} avec un code invalide.`);
+      addToast('Code Technicien Invalide. Tentative enregistrée.', 'error');
+      await logAudit('ALERTE_INTRUSION', `Tentative d'effacement de sabotage refusée sur le compteur ${meterId}.`);
     }
   };
 
@@ -1139,8 +1251,19 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentShift) return;
 
     const shiftPayments = payments.filter(p => new Date(p.timestamp) > new Date(currentShift.startTime));
-    const cashSales = shiftPayments.filter(p => ['NITA', 'AMANA', 'AGENCY', 'CASH'].includes(p.operator)).reduce((acc, p) => acc + p.amount, 0);
-    const digitalSales = shiftPayments.filter(p => ['Orange', 'Airtel'].includes(p.operator)).reduce((acc, p) => acc + p.amount, 0);
+    const cashSales = shiftPayments
+      .filter(p => {
+        const op = (p.operator || '').toUpperCase();
+        return op.includes('CASH') || op.includes('ESPECE') || op.includes('AGENC') || op.includes('NITA') || op.includes('AMANA');
+      })
+      .reduce((acc, p) => acc + p.amount, 0);
+
+    const digitalSales = shiftPayments
+      .filter(p => {
+        const op = (p.operator || '').toUpperCase();
+        return op.includes('AIRTEL') || op.includes('ORANGE') || op.includes('MOOV') || op.includes('ZAMANI') || op.includes('OTA') || op.includes('HES');
+      })
+      .reduce((acc, p) => acc + p.amount, 0);
 
     const expectedFinalCash = currentShift.initialCash + cashSales;
     const gap = finalCash - expectedFinalCash;
@@ -1158,7 +1281,7 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPastShifts(prev => [...prev, closedShift]);
     setIsShiftModalOpen(true);
 
-    generateShiftReportPDF(closedShift);
+    generateShiftReportPDF(closedShift, shiftPayments);
 
     await logAudit('CLÔTURE CAISSE', `Session Fermée. Attendu: ${expectedFinalCash}, Réel: ${finalCash}. Écart: ${gap} FCFA.`, closedShift.id);
 
@@ -1315,15 +1438,14 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const meter = meters.find(m => m.id === selectedMeterId);
     if (!meter) return;
 
-    const tokenValue = Array.from({ length: 5 }, () => Math.floor(1000 + Math.random() * 9000)).join('-');
     const billingDetails = calculateRechargeDetails(rechargeAmount, meter, TARIFFS);
     const { kwh, tva, taxe, redevance, primeFixe, taxeORNT, taxeMunicipale } = billingDetails;
     const finalKwh = type === 'recharge' ? kwh : 0;
 
     const newToken: Token = {
       id: `T${Date.now()}`,
-      token: tokenValue,
-      rawToken: tokenValue.replace(/-/g, ''),
+      token: '',
+      rawToken: '',
       amount: rechargeAmount,
       kwh: finalKwh,
       meterId: selectedMeterId,
@@ -1424,13 +1546,58 @@ export const AmiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleRotateKeys = async () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    logAudit('KMC_KEY_ROLLOVER', 'Rotation forcée des clés Maîtresses (SGC 600451). Nouveaux KCC générés.');
+    logAudit('KMC_KEY_ROLLOVER', 'Rotation forcée des clés Maîtresses (SGC 600876). Nouveaux KCC générés.');
     addToast('Rotation des clés terminée. Historique mis à jour.', 'success');
     fetchData();
   };
 
+  const handleSyncClock = async (meterId: string, customTime?: string) => {
+    const res = await authFetch('/api/v1/vending2/clock-sync', {
+      method: 'POST',
+      body: JSON.stringify({ meterNo: meterId, timestamp: customTime || new Date().toISOString() })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.message || `Échec de la synchronisation de l'horloge (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    logAudit('CLOCK_SYNC', `Synchronisation horloge RTC DLMS OBIS 0.0.1.0.0.255 pour le compteur ${meterId}`, meterId);
+    return data;
+  };
+
+  const handleReadTelemetry = async (meterNo: string) => {
+    const res = await authFetch('/api/v1/vending2/read-telemetry', {
+      method: 'POST',
+      body: JSON.stringify({ meterNo })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.message || `Échec de la télérelève (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    await fetchData();
+    return data;
+  };
+
+  const handleReadRegionTelemetry = async (regionId: string) => {
+    const res = await authFetch('/api/v1/vending2/read-region', {
+      method: 'POST',
+      body: JSON.stringify({ regionId })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.message || `Échec de la télérelève régionale (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    await fetchData();
+    return data;
+  };
+
   return (
     <AmiContext.Provider value={{
+      handleSyncClock,
+      handleReadTelemetry,
+      handleReadRegionTelemetry,
       currentUser, isLoggedIn, login, logout, setCurrentUser, setIsLoggedIn,
       toasts, addToast,
       authFetch, getApiUrl,

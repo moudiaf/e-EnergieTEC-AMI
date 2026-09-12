@@ -7,8 +7,8 @@ import { auditService } from '../services/audit.service';
 export const STSController = {
   async generateToken(req: Request, res: Response) {
     try {
-      const { meterId, kwh, type } = req.body;
-      const { token, tid, rawToken } = await stsService.generateToken(meterId, kwh, type);
+      const { meterId, kwh, type, rechargeAmount, subClass, customValue } = req.body;
+      const { token, tid, rawToken } = await stsService.generateToken(meterId, kwh, type, rechargeAmount, subClass, customValue);
       
       const tokenData = { ...req.body, token, tid, rawToken };
       const resolvedId = await stsService.persistToken(tokenData);

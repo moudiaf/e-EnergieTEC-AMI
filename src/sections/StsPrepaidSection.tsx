@@ -153,7 +153,7 @@ export const StsPrepaidSection = ({
           <div className="glass-panel p-8 rounded-[2rem] border-white/5 space-y-8">
             {/* 1. Sélection du Compteur */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <label className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center gap-2">
                 <Search size={14} className="text-brand" /> 1. Identifier le Compteur
               </label>
               <div className="relative">

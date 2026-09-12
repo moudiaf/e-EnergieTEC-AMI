@@ -1,19 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Shield, Key, Database, Globe, Bell, Smartphone, 
     RotateCcw, Save, FileCheck, Percent, Zap,
     Cpu, Radio, Signal, Lock, ShieldCheck, Settings2,
-    Terminal
+    Terminal, Server, CheckCircle2, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { User, Meter, Customer } from '../types';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-import { User, Meter, Customer } from '../types';
 
 interface SettingsSectionProps {
   settings: any;
@@ -30,19 +29,20 @@ export const SettingsSection = ({
   meters = [], 
   customers = [] 
 }: SettingsSectionProps) => {
-  const [localSettings, setLocalSettings] = React.useState(settings);
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [localSettings, setLocalSettings] = useState(settings || {});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Customer and Auditor role flags
   const isCustomer = currentUser?.role === 'customer';
   const isAuditor = currentUser?.role === 'auditor';
-  const customerInfo = customers.find(c => c.id === currentUser?.associatedCustomerId);
-  const customerMeter = meters.find(m => m.customerId === currentUser?.associatedCustomerId);
+  const customerInfo = useMemo(() => customers.find(c => c.id === currentUser?.associatedCustomerId) || customers[0], [customers, currentUser]);
+  const customerMeter = useMemo(() => meters.find(m => m.customerId === currentUser?.associatedCustomerId) || meters[0], [meters, currentUser]);
 
-  const [customerForm, setCustomerForm] = React.useState({
-    phone: customerInfo?.phone || '+227 90 12 34 56',
-    email: 'jean.dupont@email.ne',
-    address: customerInfo?.address || 'Résidence A - Apt 101, Niamey',
+  const [customerForm, setCustomerForm] = useState({
+    phone: customerInfo?.phone || '',
+    email: currentUser?.email || '',
+    address: customerInfo?.address || 'Niamey, Niger',
     smsAlerts: true,
     lowCreditAlerts: true,
     emailInvoices: true,
@@ -51,10 +51,12 @@ export const SettingsSection = ({
     confirmPassword: ''
   });
 
-  const [customerSuccessMsg, setCustomerSuccessMsg] = React.useState('');
+  const [customerSuccessMsg, setCustomerSuccessMsg] = useState('');
 
-  React.useEffect(() => {
-    setLocalSettings(settings);
+  useEffect(() => {
+    if (settings) {
+      setLocalSettings(settings);
+    }
   }, [settings]);
 
   const handleChange = (key: string, value: any) => {
@@ -63,8 +65,13 @@ export const SettingsSection = ({
 
   const handleSaveInternal = async () => {
     setIsSaving(true);
-    await onSave(localSettings);
-    setIsSaving(false);
+    try {
+      await onSave(localSettings);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveCustomerProfile = (e: React.FormEvent) => {
@@ -72,7 +79,7 @@ export const SettingsSection = ({
     setIsSaving(true);
     setTimeout(() => {
       setIsSaving(false);
-      setCustomerSuccessMsg('Vos préférences et informations de compte ont été mises à jour avec succès.');
+      setCustomerSuccessMsg('Vos préférences et informations de compte ont été enregistrées avec succès.');
       setTimeout(() => setCustomerSuccessMsg(''), 4000);
     }, 600);
   };
@@ -83,21 +90,21 @@ export const SettingsSection = ({
       <motion.div 
         initial={{ opacity: 0, y: 10 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="max-w-5xl mx-auto space-y-8 pb-32 text-white"
+        className="max-w-5xl mx-auto space-y-8 pb-32 text-white pt-2"
       >
         {/* Header Client */}
-        <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/5 pb-8">
+        <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/10 pb-8 bg-[#121318] p-6 sm:p-8 rounded-3xl border shadow-2xl">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 bg-brand/20 text-brand text-[9px] font-black uppercase rounded-full border border-brand/30 tracking-widest">
-                Portail Abonné
+              <span className="px-3 py-1 bg-brand/20 text-brand text-xs font-bold uppercase rounded-lg border border-brand/30">
+                Portail Abonné NIGELEC
               </span>
-              <span className="text-[9px] font-bold text-niger-green uppercase tracking-widest bg-niger-green/10 px-3 py-1 rounded-full border border-niger-green/20">
-                Compteur NIGELEC Synchronisé
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+                Compteur Synchronisé
               </span>
             </div>
-            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tighter">Mon Profil & <span className="text-brand">Paramètres</span></h3>
-            <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Gérer vos coordonnées, préférences d'alertes et la sécurité de votre compte</p>
+            <h3 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight">Mon Profil & <span className="text-brand">Paramètres</span></h3>
+            <p className="text-gray-300 font-bold uppercase text-xs tracking-wider mt-1">Gérer vos coordonnées, préférences d'alertes et sécurité de votre compte</p>
           </div>
         </div>
 
@@ -105,7 +112,7 @@ export const SettingsSection = ({
           <motion.div 
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl text-green-400 text-xs font-bold flex items-center gap-3"
+            className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-emerald-300 text-xs font-bold flex items-center gap-3"
           >
             <ShieldCheck size={18} />
             <span>{customerSuccessMsg}</span>
@@ -116,102 +123,102 @@ export const SettingsSection = ({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
             {/* CARD 1 : INFORMATIONS PERSONNELLES */}
-            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
-              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <div className="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand font-black">
-                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'J'}
+            <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-brand/20 border border-brand/30 flex items-center justify-center text-brand font-black text-lg">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-white uppercase tracking-tight">{currentUser?.name || 'Jean Dupont'}</h4>
-                  <p className="text-[10px] text-brand font-black uppercase tracking-widest mt-0.5">N° Abonné : {currentUser?.associatedCustomerId || 'C001'}</p>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">{currentUser?.name || customerInfo?.name || 'Utilisateur NIGELEC'}</h4>
+                  <p className="text-xs text-brand font-mono font-bold uppercase tracking-wider mt-0.5">N° Compte : {currentUser?.associatedCustomerId || customerInfo?.id || 'N/A'}</p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">N° Téléphone Mobile</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">N° Téléphone Mobile</label>
                   <input 
                     type="text" 
                     value={customerForm.phone}
                     onChange={e => setCustomerForm({ ...customerForm, phone: e.target.value })}
-                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                    className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:outline-none focus:border-brand"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Adresse Email</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Adresse Email</label>
                   <input 
                     type="email" 
                     value={customerForm.email}
                     onChange={e => setCustomerForm({ ...customerForm, email: e.target.value })}
-                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                    className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Adresse de Résidence</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Adresse d'Installation</label>
                   <input 
                     type="text" 
                     value={customerForm.address}
                     onChange={e => setCustomerForm({ ...customerForm, address: e.target.value })}
-                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm font-bold focus:outline-none focus:border-brand"
+                    className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand"
                   />
                 </div>
               </div>
             </div>
 
             {/* CARD 2 : CARACTÉRISTIQUES DU COMPTEUR */}
-            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
-              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <div className="w-12 h-12 rounded-2xl bg-niger-green/10 border border-niger-green/20 flex items-center justify-center text-niger-green">
+            <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                   <Zap size={24} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Compteur Associé</h4>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Contrat NIGELEC Actif</p>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Compteur Raccordé</h4>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">Contrat NIGELEC Actif</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
+              <div className="space-y-3">
+                <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 flex justify-between items-center">
                   <span className="text-xs font-bold text-gray-400 uppercase">N° Compteur STS</span>
-                  <span className="text-base font-black text-white font-mono">{customerMeter?.id || '541-234-567'}</span>
+                  <span className="text-base font-black text-white font-mono">{customerMeter?.id || '0128260224778'}</span>
                 </div>
 
-                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Tarif Souscrit</span>
-                  <span className="text-xs font-black text-brand uppercase">Tarif Domestique BT</span>
+                <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Type & Phase</span>
+                  <span className="text-xs font-black text-brand uppercase">{customerMeter?.phaseType === 'triphase' ? '3φ Triphasé' : '1φ Monophasé'}</span>
                 </div>
 
-                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Puissance Souscrite</span>
-                  <span className="text-xs font-black text-white">3 kVA (15A)</span>
+                <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Solde Crédit Actuel</span>
+                  <span className="text-base font-black text-emerald-400 font-mono">{(customerMeter?.credit ?? 5.0).toFixed(2)} kWh</span>
                 </div>
 
-                <div className="p-4 bg-white/5 rounded-2xl flex justify-between items-center">
-                  <span className="text-xs font-bold text-gray-400 uppercase">Solde Actuel</span>
-                  <span className="text-sm font-black text-niger-green font-mono">{(customerMeter?.credit || 27.65).toFixed(2)} kWh</span>
+                <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-400 uppercase">Énergie Totale Rechargée</span>
+                  <span className="text-base font-black text-cyan-300 font-mono">{(customerMeter?.totalConsumption ?? 0.0).toFixed(2)} kWh</span>
                 </div>
               </div>
             </div>
 
             {/* CARD 3 : PRÉFÉRENCES DE NOTIFICATIONS */}
-            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
-              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
                   <Bell size={24} />
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Préférences de Notification</h4>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Canaux d'alertes & SMS</p>
+                  <h4 className="text-lg font-black text-white uppercase tracking-tight">Canaux de Notification</h4>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">Alertes SMS & Reçus par Email</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-[#181920] rounded-2xl border border-white/10">
                   <div>
                     <p className="text-xs font-black text-white uppercase">SMS de confirmation de recharge</p>
-                    <p className="text-[10px] text-gray-500">Recevoir le code Token de 20 chiffres par SMS</p>
+                    <p className="text-[11px] text-gray-400">Recevoir le jeton STS (20 chiffres) par SMS</p>
                   </div>
                   <input 
                     type="checkbox" 
@@ -221,10 +228,10 @@ export const SettingsSection = ({
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between p-4 bg-[#181920] rounded-2xl border border-white/10">
                   <div>
-                    <p className="text-xs font-black text-white uppercase">Alerte Solde Crédit Bas (&lt; 10 kWh)</p>
-                    <p className="text-[10px] text-gray-500">Avertissement automatique avant coupure</p>
+                    <p className="text-xs font-black text-white uppercase">Alerte Solde Bas (&lt; 5 kWh)</p>
+                    <p className="text-[11px] text-gray-400">Avertissement automatique avant coupure</p>
                   </div>
                   <input 
                     type="checkbox" 
@@ -233,65 +240,52 @@ export const SettingsSection = ({
                     className="w-5 h-5 accent-brand cursor-pointer"
                   />
                 </div>
-
-                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5">
-                  <div>
-                    <p className="text-xs font-black text-white uppercase">Reçus de Paiement par Email</p>
-                    <p className="text-[10px] text-gray-500">Envoi automatique du duplicata PDF</p>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={customerForm.emailInvoices}
-                    onChange={e => setCustomerForm({ ...customerForm, emailInvoices: e.target.checked })}
-                    className="w-5 h-5 accent-brand cursor-pointer"
-                  />
-                </div>
               </div>
             </div>
 
             {/* CARD 4 : SÉCURITÉ & MOT DE PASSE */}
-            <div className="glass-panel p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] shadow-2xl space-y-6">
-              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-6">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
                   <Lock size={24} />
                 </div>
                 <div>
                   <h4 className="text-lg font-black text-white uppercase tracking-tight">Sécurité du Compte</h4>
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">Modifier votre mot de passe</p>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">Modifier votre mot de passe d'accès</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Mot de passe actuel</label>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Mot de passe actuel</label>
                   <input 
-                    type="password"
+                    type="password" 
                     placeholder="••••••••"
                     value={customerForm.currentPassword}
                     onChange={e => setCustomerForm({ ...customerForm, currentPassword: e.target.value })}
-                    className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                    className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Nouveau mot de passe</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Nouveau mot de passe</label>
                     <input 
-                      type="password"
+                      type="password" 
                       placeholder="••••••••"
                       value={customerForm.newPassword}
                       onChange={e => setCustomerForm({ ...customerForm, newPassword: e.target.value })}
-                      className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                      className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Confirmer</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Confirmer</label>
                     <input 
-                      type="password"
+                      type="password" 
                       placeholder="••••••••"
                       value={customerForm.confirmPassword}
                       onChange={e => setCustomerForm({ ...customerForm, confirmPassword: e.target.value })}
-                      className="w-full h-12 bg-black/40 border border-white/10 rounded-2xl px-4 text-white text-sm focus:outline-none focus:border-brand"
+                      className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand"
                     />
                   </div>
                 </div>
@@ -304,9 +298,9 @@ export const SettingsSection = ({
             <button 
               type="submit"
               disabled={isSaving}
-              className="px-10 py-4 bg-brand hover:bg-brand-light rounded-2xl text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-brand/20 transition-all active:scale-95 disabled:opacity-50"
+              className="px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSaving ? "Enregistrement..." : "Mettre à jour mon profil abonné"}
+              {isSaving ? "Enregistrement..." : "Mettre à jour mon profil"}
             </button>
           </div>
         </form>
@@ -314,262 +308,281 @@ export const SettingsSection = ({
     );
   }
 
+  // ─── RENDU DU CENTRE DE CONTRÔLE ADMIN (PARAMÈTRES SYSTÈME) ───────
   return (
     <motion.div 
         initial={{ opacity: 0, y: 10 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="space-y-8 pb-32 text-white"
+        className="space-y-8 pb-32 text-white pt-2"
     >
       {/* ── Header Institutionnel ────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/5 pb-8">
-        <div>
+      <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 border-b border-white/10 pb-8 bg-[#121318] p-6 sm:p-8 rounded-3xl border shadow-2xl relative overflow-hidden">
+        <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 bg-brand/20 text-brand text-[8px] font-black uppercase rounded border border-brand/30 tracking-widest shadow-[0_0_15px_rgba(255,107,53,0.2)]">Configuration Core</span>
-            <span className="flex items-center gap-1 text-[8px] font-bold text-niger-green uppercase tracking-widest bg-niger-green/10 px-2 py-0.5 rounded border border-niger-green/20">
-                <ShieldCheck size={10} /> Gouvernance Nationale Certifiée
+            <span className="px-3 py-1 bg-brand/20 text-brand text-xs font-black uppercase rounded-lg border border-brand/30 tracking-widest">
+              Configuration Centrale e-EnergieTEC
+            </span>
+            <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 uppercase tracking-widest bg-emerald-500/20 px-3 py-1 rounded-lg border border-emerald-500/30">
+                <ShieldCheck size={12} /> Gouvernance NIGELEC Certifiée
             </span>
           </div>
-          <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Paramètres <span className="text-brand">Système (VEE)</span></h3>
-          <p className="text-gray-500 font-bold uppercase text-[10px] tracking-[0.3em] mt-1 italic">Administration des protocoles STS, politiques fiscales et redondance réseau</p>
+          <h3 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+            <Settings2 className="text-brand" size={36} /> Paramètres <span className="text-brand">Système & HES</span>
+          </h3>
+          <p className="text-gray-300 font-bold uppercase text-xs tracking-widest mt-1">
+            Gestion des constantes STS, paramètres de facturation, protocoles DLMS/COSEM et services d'infrastructure
+          </p>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-4 relative z-10">
           {isAuditor ? (
-            <div className="px-6 py-3.5 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl text-yellow-400 font-black text-xs uppercase tracking-widest flex items-center gap-3">
+            <div className="px-6 py-3.5 bg-amber-500/20 border border-amber-500/40 rounded-2xl text-amber-300 font-black text-xs uppercase tracking-widest flex items-center gap-3">
               <Lock size={16} /> Mode Consultation (Lecture Seule ARSE)
             </div>
           ) : (
             <button 
                 onClick={handleSaveInternal}
                 disabled={isSaving}
-                className="group relative px-10 py-4 bg-brand shadow-[0_10px_30px_rgba(255,107,53,0.3)] hover:bg-brand-light rounded-2xl transition-all flex items-center gap-3 overflow-hidden text-white border border-brand/20 disabled:opacity-50"
+                className="px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg transition-all flex items-center gap-2.5 cursor-pointer disabled:opacity-50"
             >
-                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                {isSaving ? <RotateCcw size={20} className="animate-spin relative z-10" /> : <Save size={20} className="relative z-10" />}
-                <span className="text-[10px] font-black uppercase tracking-widest relative z-10 whitespace-nowrap">
-                    {isSaving ? 'Synchronisation...' : 'Enregistrer les Changements'}
-                </span>
+                {isSaving ? <RefreshCw size={16} className="animate-spin" /> : saveSuccess ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Save size={16} />}
+                <span>{isSaving ? 'Enregistrement...' : saveSuccess ? 'Paramètres Enregistrés !' : 'Sauvegarder les Paramètres'}</span>
             </button>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* STS & PROTOCOLS */}
-        <div className="space-y-8">
-            <div className="glass-panel p-8 rounded-[3rem] border border-white/5 bg-[#121214] relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-[100px] pointer-events-none"></div>
-                
-                <div className="flex items-center gap-5 mb-10">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                        <Key size={32} />
-                    </div>
-                    <div>
-                        <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Infrastructure <span className="text-brand">STS</span></h4>
-                        <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-1">Conformité association STS (IEC 62055-41)</p>
-                    </div>
-                </div>
+        
+        {/* SECTION 1 : STS & PARAMÈTRES DE RECHARGE */}
+        <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+          <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-brand/20 border border-brand/30 flex items-center justify-center text-brand">
+              <Key size={24} />
+            </div>
+            <div>
+              <h4 className="text-xl font-black text-white uppercase tracking-tight">Paramètres <span className="text-brand">STS Prépayé</span></h4>
+              <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mt-0.5">Norme Internationale CEI / IEC 62055-41</p>
+            </div>
+          </div>
 
-                <div className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Supply Group Code (SGC)</label>
-                        <div className="relative group">
-                            <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-700 group-focus-within:text-brand transition-colors" size={16} />
-                            <input 
-                                type="text" 
-                                disabled={isAuditor}
-                                value={localSettings.sgc || '600451'} 
-                                onChange={(e) => handleChange('sgc', e.target.value)}
-                                className={cn(
-                                    "w-full h-14 bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 text-white font-mono font-black placeholder:text-gray-800 focus:outline-none focus:border-brand/40 uppercase tracking-widest transition-all",
-                                    isAuditor && "opacity-60 cursor-not-allowed"
-                                )}
-                            />
-                        </div>
-                        <p className="text-[8px] text-gray-700 font-bold uppercase tracking-tighter px-1">Identifiant unique NIGELEC</p>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Key Revision (KRN)</label>
-                        <div className="relative">
-                            <select 
-                                disabled={isAuditor}
-                                value={localSettings.krn || '1'} 
-                                onChange={(e) => handleChange('krn', e.target.value)}
-                                className={cn(
-                                    "w-full h-14 bg-black/40 border border-white/5 rounded-2xl px-6 text-white font-black appearance-none outline-none focus:border-brand/40 uppercase tracking-widest cursor-pointer transition-all",
-                                    isAuditor && "opacity-60 cursor-not-allowed"
-                                )}
-                            >
-                                <option value="1">Revision 1 (Current)</option>
-                                <option value="2">Revision 2 (Rollover Enabled)</option>
-                            </select>
-                            <Settings2 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-700 pointer-events-none" size={16} />
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 rounded-[2rem] bg-orange-500/5 border border-orange-500/10 flex flex-col items-center text-center">
-                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-4">Fonction Critique : Transition Clé de Racine</p>
-                    <button 
-                        disabled={isAuditor}
-                        className={cn(
-                            "px-8 py-3 bg-white/5 hover:bg-orange-600 text-orange-500 hover:text-white border border-orange-500/20 rounded-xl transition-all flex items-center gap-3 group",
-                            isAuditor && "opacity-40 cursor-not-allowed hover:bg-white/5 hover:text-orange-500"
-                        )}
-                    >
-                        <RotateCcw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Rollover National Automatisé</span>
-                    </button>
-                    <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-4">⚠️ impacte tous les jetons en circulation</p>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Supply Group Code (SGC)</label>
+              <input 
+                type="text" 
+                disabled={isAuditor}
+                value={localSettings.sgc || '600876'} 
+                onChange={e => handleChange('sgc', e.target.value)}
+                className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:border-brand outline-none font-bold"
+              />
+              <p className="text-[10px] text-gray-400">Identifiant SGC officiel NIGELEC (600876).</p>
             </div>
 
-            <div className="glass-panel p-8 rounded-[3rem] border border-white/5 bg-[#121214] flex flex-col shadow-2xl relative overflow-hidden">
-                <div className="absolute bottom-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-[80px] pointer-events-none"></div>
-                <div className="flex items-center gap-5 mb-8">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
-                        <FileCheck size={30} />
-                    </div>
-                    <div>
-                        <h4 className="text-xl font-black text-white uppercase tracking-tight leading-none">Régulation <span className="text-blue-500">& Gouvernance</span></h4>
-                        <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-1">Directives ARSE (Niger)</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 relative group">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest">TVA Appliquée</div>
-                            <Percent size={14} className="text-gray-700 group-hover:text-brand transition-colors" />
-                        </div>
-                        <div className="flex items-end gap-2">
-                            <input 
-                                type="number" 
-                                disabled={isAuditor}
-                                value={localSettings.vat_rate || 19} 
-                                onChange={(e) => handleChange('vat_rate', parseFloat(e.target.value))}
-                                className={cn(
-                                    "w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-brand/30",
-                                    isAuditor && "opacity-60 cursor-not-allowed"
-                                )}
-                            />
-                            <span className="text-sm font-black text-brand mb-1">%</span>
-                        </div>
-                    </div>
-
-                    <div className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 relative group">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Seuil Pertes Max.</div>
-                            <Zap size={14} className="text-gray-700 group-hover:text-orange-500 transition-colors" />
-                        </div>
-                        <div className="flex items-end gap-2">
-                            <input 
-                                type="number" 
-                                disabled={isAuditor}
-                                value={localSettings.tech_loss_threshold || 7.5} 
-                                onChange={(e) => handleChange('tech_loss_threshold', parseFloat(e.target.value))}
-                                className={cn(
-                                    "w-24 h-10 bg-black/40 border border-white/5 rounded-xl text-center text-2xl font-black text-white outline-none focus:border-orange-500/30",
-                                    isAuditor && "opacity-60 cursor-not-allowed"
-                                )}
-                            />
-                            <span className="text-sm font-black text-orange-500 mb-1">%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-8 pt-8 border-t border-white/5">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4 block">Génération des Rapports Réglementaires</label>
-                    <div className="flex gap-4">
-                        {['Quotidien', 'Hebdomadaire', 'Mensuel'].map(f => (
-                            <button 
-                                key={f}
-                                disabled={isAuditor}
-                                onClick={() => handleChange('audit_frequency', f)}
-                                className={cn(
-                                    "flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all",
-                                    localSettings.audit_frequency === f || (!localSettings.audit_frequency && f === 'Mensuel') 
-                                        ? "bg-blue-500/10 border-blue-500 text-white shadow-lg shadow-blue-500/10" 
-                                        : "bg-white/5 border-white/5 text-gray-600 hover:border-white/20",
-                                    isAuditor && "opacity-60 cursor-not-allowed"
-                                )}
-                            >
-                                {f}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Indice KRN par Défaut</label>
+              <select 
+                disabled={isAuditor}
+                value={localSettings.krn || '2'} 
+                onChange={e => handleChange('krn', e.target.value)}
+                className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:border-brand outline-none font-bold"
+              >
+                <option value="1">KRN = 1 (Legacy)</option>
+                <option value="2">KRN = 2 (Actif / Rollover Ready)</option>
+              </select>
+              <p className="text-[10px] text-gray-400">Key Revision Number en vigueur.</p>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Devise Monétaire Vending</label>
+              <input 
+                type="text" 
+                disabled={isAuditor}
+                value={localSettings.currency || 'FCFA (XOF)'} 
+                onChange={e => handleChange('currency', e.target.value)}
+                className="w-full bg-[#181920] border border-white/15 rounded-xl px-4 py-2.5 text-white text-sm focus:border-brand outline-none font-bold font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-gray-300 uppercase tracking-wider">Date de Référence STS</label>
+              <input 
+                type="text" 
+                disabled
+                value="01/01/1993 00:00 UTC (Base TID)" 
+                className="w-full bg-[#14151a] border border-white/10 rounded-xl px-4 py-2.5 text-gray-400 text-sm font-mono"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* CLOUD & HARDWARE STATUS */}
-        <div className="space-y-8">
-            <div className="glass-panel p-8 rounded-[3rem] border border-white/5 bg-[#121214] shadow-2xl h-full flex flex-col">
-                <div className="flex items-center gap-5 mb-10">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                        <Shield size={32} />
-                    </div>
-                    <div>
-                        <h4 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Maintenance <span className="text-purple-400">& Services</span></h4>
-                        <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mt-1">Disponibilité critique du MDMS Core</p>
-                    </div>
-                </div>
-
-                <div className="space-y-4 flex-grow">
-                    <ToggleCard 
-                        icon={Bell} 
-                        label="Mode Maintenance Global" 
-                        desc="Désactive l'accès au portail client" 
-                        active={localSettings.maintenance_mode} 
-                        color="text-orange-500" 
-                        onToggle={() => handleChange('maintenance_mode', !localSettings.maintenance_mode)} 
-                        disabled={isAuditor}
-                    />
-                    <ToggleCard 
-                        icon={Smartphone} 
-                        label="Passerelle SMS Intégrée" 
-                        desc="Routeur Orange/Airtel actif" 
-                        active={localSettings.sms_gateway_active} 
-                        color="text-brand" 
-                        onToggle={() => handleChange('sms_gateway_active', !localSettings.sms_gateway_active)} 
-                        disabled={isAuditor}
-                    />
-                    <ToggleCard 
-                        icon={Globe} 
-                        label="Géo-Redondance Active" 
-                        desc="Backup Niamey &rarr; Maradi" 
-                        active={localSettings.geo_redundancy_active} 
-                        color="text-blue-400" 
-                        onToggle={() => handleChange('geo_redundancy_active', !localSettings.geo_redundancy_active)} 
-                        disabled={isAuditor}
-                    />
-                    <ToggleCard 
-                        icon={Signal} 
-                        label="Supervision SCADA Directe" 
-                        desc="Connexion bas niveau RTU" 
-                        active={true} 
-                        color="text-niger-green" 
-                        onToggle={() => {}} 
-                        disabled
-                    />
-                </div>
-
-                <div className="mt-10 p-6 rounded-[2rem] bg-black/40 border border-white/5 relative group/terminal">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Terminal size={14} className="text-niger-green" />
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Connectivité Backend (VEE)</span>
-                    </div>
-                    <div className="space-y-2 font-mono text-[10px] leading-relaxed">
-                        <p className="text-gray-500">SYSTEM_UPTIME: <span className="text-white">128d 4h 12m</span></p>
-                        <p className="text-gray-500">API_VERSION: <span className="text-brand">v4.2.1-stable</span></p>
-                        <p className="text-gray-500">DB_CLUSTER: <span className="text-blue-400">NIAMEY-HQ-01 (ACTIVE)</span></p>
-                    </div>
-                    <div className="absolute top-4 right-6 w-2 h-2 rounded-full bg-niger-green animate-pulse"></div>
-                </div>
+        {/* SECTION 2 : FACTURATION, FISCALITÉ & DIRECTIVES ARSE */}
+        <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+          <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <FileCheck size={24} />
             </div>
+            <div>
+              <h4 className="text-xl font-black text-white uppercase tracking-tight">Régulation <span className="text-blue-400">& Fiscalité ARSE</span></h4>
+              <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mt-0.5">Taux TVA & Seuils Réglementaires du Niger</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-300 uppercase">Taux de TVA National</span>
+                <Percent size={14} className="text-brand" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number"
+                  step="0.5"
+                  disabled={isAuditor}
+                  value={localSettings.vat_rate ?? 19.0}
+                  onChange={e => handleChange('vat_rate', parseFloat(e.target.value))}
+                  className="w-24 bg-[#121318] border border-white/20 rounded-xl px-3 py-1.5 text-lg font-black text-white font-mono focus:border-brand outline-none"
+                />
+                <span className="text-sm font-bold text-gray-300">%</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-gray-300 uppercase">Seuil Pertes Max</span>
+                <Zap size={14} className="text-amber-400" />
+              </div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number"
+                  step="0.1"
+                  disabled={isAuditor}
+                  value={localSettings.tech_loss_threshold ?? 7.5}
+                  onChange={e => handleChange('tech_loss_threshold', parseFloat(e.target.value))}
+                  className="w-24 bg-[#121318] border border-white/20 rounded-xl px-3 py-1.5 text-lg font-black text-amber-300 font-mono focus:border-amber-400 outline-none"
+                />
+                <span className="text-sm font-bold text-gray-300">%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <label className="text-xs font-bold text-gray-300 uppercase tracking-wider block">
+              Fréquence de Clôture & Bilans MDMS
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {['Quotidien', 'Hebdomadaire', 'Mensuel'].map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  disabled={isAuditor}
+                  onClick={() => handleChange('audit_frequency', f)}
+                  className={cn(
+                    "py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer",
+                    (localSettings.audit_frequency === f || (!localSettings.audit_frequency && f === 'Mensuel'))
+                      ? "bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-sm"
+                      : "bg-[#181920] border-white/10 text-gray-400 hover:text-white"
+                  )}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* SECTION 3 : INFRASTRUCTURE RÉSEAU HES & PORTS */}
+        <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-6">
+          <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <Server size={24} />
+            </div>
+            <div>
+              <h4 className="text-xl font-black text-white uppercase tracking-tight">Passerelle <span className="text-purple-400">HES & DLMS</span></h4>
+              <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mt-0.5">Paramètres Sockets & Télérelève</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-[#181920] rounded-2xl border border-white/10">
+              <p className="text-xs font-bold text-gray-400 uppercase">Port DLMS HDLC</p>
+              <p className="text-lg font-black text-white font-mono mt-1">TCP 4059</p>
+            </div>
+            <div className="p-4 bg-[#181920] rounded-2xl border border-white/10">
+              <p className="text-xs font-bold text-gray-400 uppercase">Module KMS-HSM</p>
+              <p className="text-lg font-black text-emerald-400 font-mono mt-1">Port 5000</p>
+            </div>
+            <div className="p-4 bg-[#181920] rounded-2xl border border-white/10">
+              <p className="text-xs font-bold text-gray-400 uppercase">API REST HES</p>
+              <p className="text-lg font-black text-cyan-300 font-mono mt-1">Port 3000</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#181920] rounded-2xl border border-white/10 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-gray-300 uppercase">Intervalle de Polling Profil de Charge</span>
+              <span className="text-xs font-mono font-bold text-brand">15 Minutes (Standard)</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-400 pt-1">
+              <span>Protocole d'Échange : DLMS/COSEM Green Book v10</span>
+              <span className="text-emerald-400 font-bold">Chiffrement AES-128 GCM</span>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4 : SERVICES & NOTIFICATIONS TÉLÉCOM */}
+        <div className="p-6 sm:p-8 rounded-3xl border border-white/15 bg-[#121318] shadow-2xl space-y-4 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-4 border-b border-white/10 pb-4 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Bell size={24} />
+              </div>
+              <div>
+                <h4 className="text-xl font-black text-white uppercase tracking-tight">Services & <span className="text-amber-400">Passerelles</span></h4>
+                <p className="text-xs text-gray-300 font-bold uppercase tracking-wider mt-0.5">Routeurs SMS et Redondance Réseau</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <ToggleCard 
+                icon={Smartphone} 
+                label="Passerelle SMS Intégrée" 
+                desc="Routeur Orange & Airtel Niger actif" 
+                active={localSettings.sms_gateway_active !== false} 
+                color="text-brand" 
+                onToggle={() => handleChange('sms_gateway_active', !(localSettings.sms_gateway_active !== false))} 
+                disabled={isAuditor}
+              />
+              <ToggleCard 
+                icon={Globe} 
+                label="Géo-Redondance Multi-Régions" 
+                desc="Réplication Niamey &harr; Maradi &harr; Zinder" 
+                active={localSettings.geo_redundancy_active !== false} 
+                color="text-blue-400" 
+                onToggle={() => handleChange('geo_redundancy_active', !(localSettings.geo_redundancy_active !== false))} 
+                disabled={isAuditor}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#181920] border border-white/10 font-mono text-xs text-gray-300 space-y-1.5 mt-4">
+            <div className="flex justify-between">
+              <span>BASE DE DONNÉES :</span>
+              <span className="text-emerald-400 font-bold">SQLite Sovereign (Local)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>STATUT DU CORE :</span>
+              <span className="text-brand font-bold">e-EnergieTEC Sovereign Enterprise v6.5 (Opérationnel)</span>
+            </div>
+            <div className="flex justify-between pt-1 border-t border-white/5 text-[10px] text-gray-500">
+              <span>PROPRIÉTÉ & COPYRIGHT :</span>
+              <span className="font-bold text-gray-400">© 2026 e-EnergieTEC (RENTEC AMI). Tous droits réservés.</span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </motion.div>
   );
@@ -577,31 +590,31 @@ export const SettingsSection = ({
 
 const ToggleCard = ({ icon: Icon, label, desc, active, color, onToggle, disabled = false }: any) => (
     <div className={cn(
-        "flex items-center justify-between p-6 bg-white/[0.02] border border-white/5 rounded-[2rem] group transition-all",
-        !disabled && "hover:bg-white/[0.05] hover:border-white/10"
+        "flex items-center justify-between p-4 bg-[#181920] border border-white/10 rounded-2xl transition-all",
+        !disabled && "hover:border-white/20"
     )}>
-        <div className="flex items-center gap-5">
-            <div className={cn("w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center transition-transform group-hover:scale-110", color)}>
-                <Icon size={20} />
+        <div className="flex items-center gap-3.5">
+            <div className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0", color)}>
+                <Icon size={18} />
             </div>
             <div>
-                <p className="text-sm font-black text-white uppercase tracking-tight">{label}</p>
-                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest leading-none mt-1">{desc}</p>
+                <p className="text-xs font-black text-white uppercase tracking-tight">{label}</p>
+                <p className="text-[10px] text-gray-400 font-bold">{desc}</p>
             </div>
         </div>
         <div 
             onClick={!disabled ? onToggle : undefined}
             className={cn(
-                "w-12 h-6 rounded-full relative transition-all duration-300 border",
-                active ? "bg-brand/20 border-brand/40" : "bg-black/40 border-white/10",
+                "w-12 h-6 rounded-full relative transition-all duration-300 border shrink-0",
+                active ? "bg-brand/30 border-brand/60" : "bg-[#121318] border-white/15",
                 disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
             )}
         >
             <motion.div 
                 animate={{ x: active ? 26 : 4 }}
                 className={cn(
-                    "absolute top-1 w-4 h-4 rounded-full shadow-lg",
-                    active ? "bg-brand" : "bg-gray-600"
+                    "absolute top-1 w-4 h-4 rounded-full shadow-md",
+                    active ? "bg-brand" : "bg-gray-500"
                 )}
             />
         </div>

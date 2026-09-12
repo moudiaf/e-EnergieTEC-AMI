@@ -46,7 +46,7 @@ async function cleanAuditsAndAlerts() {
     {
       id: 'AUD-KMS-2026-02',
       action: 'KMC_KEY_ROLLOVER',
-      details: 'Vérification de la rotation automatique des clés maîtres (Group SGC 600451 - KRN 1)',
+      details: 'Vérification de la rotation automatique des clés maîtres (Group SGC 600876 - KRN 1)',
       user: 'admin',
       timestamp: new Date(Date.now() - 86400000).toISOString()
     },

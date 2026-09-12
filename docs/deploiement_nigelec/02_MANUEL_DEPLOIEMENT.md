@@ -87,6 +87,10 @@ docker-compose up -d
 ```
 
 ## 6. Vérification Post-Déploiement
-*   **Interface Web :** Accéder à `https://portail-ami.nigelec.ne` depuis un navigateur.
-*   **Connexion :** Tester la connexion avec le compte Super Administrateur (`admin` / `admin`). **NB : Ce mot de passe doit être changé dès la première connexion.**
-*   **API :** Exécuter une requête `GET` sur l'endpoint de santé : `https://api-ami.nigelec.ne/health` (Le serveur doit retourner `Status: OK`).
+*   **Interface Web :** Accéder à `https://portail-ami.nigelec.ne` (ou `http://localhost:3000`) depuis un navigateur.
+*   **Connexion :** Tester la connexion avec le compte Super Administrateur (`admin` / `admin123`). **NB : Ce mot de passe doit être changé dès la première connexion.**
+*   **API & Santé Démons :**
+    *   API Principale : `http://localhost:3000/api/mdms/stats`
+    *   KMS-HSM Sécurité : `http://localhost:5000/health`
+    *   Passerelle HES : `http://localhost:4060/health` (ou `/api/v1/vending2/health`)
+    *   Watchdog SSE : `http://localhost:3000/api/watchdog/stream`

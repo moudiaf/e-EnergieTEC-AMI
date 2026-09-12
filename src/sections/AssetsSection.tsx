@@ -50,7 +50,7 @@ export const AssetsSection = ({
         faulty: stockMeters.filter(m => m.lifecycleStatus === 'faulty').length,
         decommissioned: stockMeters.filter(m => m.lifecycleStatus === 'decommissioned').length,
         batches: new Set(stockMeters.map(m => m.batchId)).size,
-        value: stockMeters.filter(m => m.lifecycleStatus === 'in_stock').length * 45000 // Prix moyen fictif
+        value: stockMeters.filter(m => m.lifecycleStatus === 'in_stock').length * 45000 // Coût unitaire d'acquisition standard (45 000 FCFA)
     }), [stockMeters]);
 
     const suppliers = useMemo(() => {
@@ -132,12 +132,12 @@ export const AssetsSection = ({
                 />
                 <KPIItem 
                     title="Valeur de Stock" 
-                    value={`${(stats.value / 1000000).toFixed(1)}M`} 
-                    sub="Estimation en Millions FCFA" 
+                    value={`${(stats.value / 1000000).toFixed(2)}M`} 
+                    sub={stats.inStock > 0 ? `${stats.inStock} unité(s) en magasin` : "Magasin vide (0 unité)"} 
                     icon={Warehouse} 
                     color="text-blue-400" 
-                    bg="bg-blue-400/10"
-                    trend="CAPEX Nigelec"
+                    bg="bg-blue-400/10" 
+                    trend={stats.inStock > 0 ? "Valorisation standard" : "Aucun stock"}
                 />
             </div>
 

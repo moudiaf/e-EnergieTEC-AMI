@@ -54,7 +54,7 @@ export const FraudReportModal: React.FC<FraudReportModalProps> = ({ isOpen, onCl
               <div className="inline-block p-2 border-2 border-red-600 text-red-600 font-black text-sm uppercase mb-2">
                 Document Confidentiel
               </div>
-              <p className="text-[10px] text-gray-500 font-mono">REF: AMI-RA-{new Date().getFullYear()}-{Math.floor(Math.random()*10000)}</p>
+              <p className="text-[10px] text-gray-500 font-mono">REF: AMI-RA-{new Date().getFullYear()}-{String(fraudData.id || fraudData.meterId || '0001').slice(-4)}</p>
               <p className="text-[10px] text-gray-500 font-mono">DATE: {new Date().toLocaleDateString('fr-FR')}</p>
             </div>
           </div>
@@ -115,19 +115,20 @@ export const FraudReportModal: React.FC<FraudReportModalProps> = ({ isOpen, onCl
 
           <div className="grid grid-cols-2 gap-12 mt-20">
             <div className="text-center space-y-4">
-              <p className="text-[10px] font-black uppercase text-gray-500">Le Responsable Revenue Assurance</p>
-              <div className="h-20 flex items-center justify-center grayscale opacity-50">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Jon_Kirsch%27s_Signature.png" alt="Signature" className="h-full object-contain" />
+              <p className="text-[10px] font-black uppercase text-gray-500">Validation Revenue Assurance</p>
+              <div className="h-20 flex flex-col items-center justify-center border border-dashed border-gray-300 rounded-xl p-2 bg-gray-50">
+                <span className="text-[10px] font-mono font-bold text-gray-600">SIGNATURE NUMÉRIQUE CERTIFIÉE</span>
+                <span className="text-[8px] font-mono text-gray-400">Direction Commerciale & Recouvrement</span>
               </div>
-              <p className="text-xs font-bold text-gray-900">M. Abdoulaye Moussa</p>
+              <p className="text-xs font-bold text-gray-900">Division Revenue Assurance NIGELEC</p>
             </div>
             <div className="text-center space-y-4">
-              <p className="text-[10px] font-black uppercase text-gray-500">Cachet du Système AMI (Digital Seal)</p>
-              <div className="w-24 h-24 border-4 border-gray-200 rounded-full mx-auto flex items-center justify-center flex-col opacity-30">
-                <ShieldCheck size={40} />
-                <span className="text-[8px] font-black uppercase mt-1">VERIFIED</span>
+              <p className="text-[10px] font-black uppercase text-gray-500">Sceau d'Intégrité AMI (Digital Seal)</p>
+              <div className="w-20 h-20 border-2 border-emerald-500/30 rounded-full mx-auto flex items-center justify-center flex-col text-emerald-600 bg-emerald-50/50">
+                <ShieldCheck size={30} />
+                <span className="text-[7px] font-black uppercase mt-0.5">VÉRIFIÉ</span>
               </div>
-              <p className="text-[8px] text-gray-400 font-mono break-all">HASH: {Math.random().toString(36).substring(2, 15).toUpperCase()}</p>
+              <p className="text-[8px] text-gray-400 font-mono break-all">SEAL: NIGELEC-SEC-{String(fraudData.id || fraudData.meterId || 'METER').toUpperCase()}</p>
             </div>
           </div>
 

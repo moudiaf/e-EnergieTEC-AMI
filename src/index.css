@@ -8,7 +8,8 @@
   --color-brand: #ff6b35;
   --color-brand-light: #ff8c42;
   --color-niger-green: #00A651;
-  --color-bg-dark: #000000;
+  --color-bg-dark: #070a14;
+  --color-bg-main: #070b16;
   --color-panel: rgba(255, 255, 255, 0.02);
 
   --gradient-nigelec: linear-gradient(135deg, #ff6b35 0%, #00A651 100%);
@@ -23,7 +24,8 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-white/[0.02] backdrop-blur-2xl border border-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300 hover:border-white/[0.08];
+    @apply bg-[#0c1427]/60 backdrop-blur-2xl border border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/[0.14];
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
   }
   
   .input-field {
@@ -52,6 +54,14 @@
     linear-gradient(rgba(255, 107, 53, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 107, 53, 0.03) 1px, transparent 1px);
   background-size: 50px 50px;
+}
+
+.scada-grid-pattern {
+  background-image: 
+    radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 32px 32px;
 }
 
 .meter-display {

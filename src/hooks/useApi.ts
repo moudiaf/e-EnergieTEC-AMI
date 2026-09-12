@@ -1,8 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useToasts } from './useToasts';
 
 export const useApi = (logout: () => void) => {
   const { addToast } = useToasts();
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
+  const addToastRef = useRef(addToast);
+  addToastRef.current = addToast;
 
   const getApiUrl = (url: string) => {
     const baseUrl = import.meta.env.VITE_API_URL || '';
@@ -33,12 +37,12 @@ export const useApi = (logout: () => void) => {
 
     if (res.status === 403 || res.status === 401) {
       if (url !== '/api/login') {
-        logout();
-        addToast('Session expirée — Veuillez vous reconnecter.', 'error');
+        logoutRef.current();
+        addToastRef.current('Session expirée — Veuillez vous reconnecter.', 'error');
       }
     }
     return res;
-  }, [logout, addToast]);
+  }, []);
 
   return { authFetch, getApiUrl };
 };

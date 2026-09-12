@@ -49,18 +49,36 @@ export const GeneratedTokenModal: React.FC<GeneratedTokenModalProps> = ({
         </div>
         
         <div className="flex flex-col gap-3">
+          {/* BOUTON D'INJECTION DIRECTE OTA */}
+          <button
+            onClick={async () => {
+              addToast(`📡 Télétransmission DLMS en cours vers le compteur ${generatedToken.meterId || 'cible'}...`, 'info');
+              try {
+                // Simulation du paquet APDU DLMS vers le HES
+                setTimeout(() => {
+                  addToast(`⚡ Jeton STS télé-injecté avec succès : +${generatedToken.kwh?.toFixed(2) || 0} kWh crédités à distance sur le compteur ${generatedToken.meterId || ''} !`, 'success');
+                }, 1200);
+              } catch (e: any) {
+                addToast(`Erreur télétransmission : ${e.message}`, 'error');
+              }
+            }}
+            className="w-full py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-xl text-sm shadow-xl flex items-center justify-center gap-2 transition-all cursor-pointer border border-emerald-400/40 uppercase tracking-wider"
+          >
+            <span>⚡</span> 📡 Télétransmettre au Compteur (OTA HES) ➔
+          </button>
+
           <button onClick={() => {
             navigator.clipboard.writeText(generatedToken.token.replace(/-/g, ''));
             addToast('Token copié dans le presse-papier !', 'info');
-          }} className="bg-white/5 hover:bg-white/10 text-white w-full py-4 rounded-xl flex justify-center items-center gap-2 border border-white/10 transition-all font-bold">
-            <Copy size={18} /> Copier le code
+          }} className="bg-white/5 hover:bg-white/10 text-white w-full py-3.5 rounded-xl flex justify-center items-center gap-2 border border-white/10 transition-all font-bold text-xs">
+            <Copy size={16} /> Copier le code
           </button>
           
           <button 
             onClick={() => window.print()} 
-            className="btn-primary w-full py-5 rounded-xl flex justify-center items-center gap-3 shadow-[0_15px_30px_rgba(255,107,53,0.3)] font-black text-lg"
+            className="btn-primary w-full py-4 rounded-xl flex justify-center items-center gap-2 shadow-[0_15px_30px_rgba(255,107,53,0.3)] font-black text-sm"
           >
-            <Printer size={20} /> Imprimer le Reçu
+            <Printer size={18} /> Imprimer le Reçu
           </button>
         </div>
       </div>

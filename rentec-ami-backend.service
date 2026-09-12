@@ -1,0 +1,20 @@
+[Unit]
+Description=RENTEC AMI - Head-End System (HES) & MDMS Backend API Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/rentec-ami
+ExecStart=/usr/bin/npx tsx server.ts
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Security & Sandbox Limits
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

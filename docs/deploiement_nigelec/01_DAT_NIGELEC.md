@@ -1,9 +1,9 @@
 # Document d'Architecture Technique (DAT)
 ## Système e-EnergieTEC - Déploiement NIGELEC
 
-**Version:** 1.0
-**Date:** Avril 2026
-**Statut:** Approuvé pour Déploiement Initial
+**Version:** 6.5
+**Date:** Septembre 2026
+**Statut:** Qualifié pour Déploiement et Exploitation Nationale (NIGELEC / ARSE)
 
 ---
 
@@ -14,8 +14,8 @@ Ce document décrit l'architecture technique, matérielle et logicielle de la pl
 La solution e-EnergieTEC repose sur une architecture moderne de type "Full-Stack Web" avec une séparation claire entre le Frontend (présentation) et le Backend (logique métier & base de données).
 
 L'architecture est structurée en 3 Tiers :
-1. **Tier Présentation (Frontend) :** Interface utilisateur riche et réactive (React.js).
-2. **Tier Logique (Backend) :** Serveur d'API RESTful (Node.js/Express) gérant les requêtes métiers, l'authentification et l'interface avec le réseau AMI.
+1. **Tier Présentation (Frontend) :** Interface utilisateur riche et réactive (React.js, Vite).
+2. **Tier Logique (Backend) :** Serveur d'API RESTful (Node.js/Express) gérant les requêtes métiers, l'authentification et l'interface avec le réseau AMI et les modems GPRS/4G.
 3. **Tier Données (Database) :** Base de données relationnelle persistante (PostgreSQL/SQLite) et base orientée séries temporelles (TimescaleDB) pour la gestion des courbes de charge (Load Profiles).
 
 ## 3. Composants Logiciels
@@ -23,16 +23,20 @@ L'architecture est structurée en 3 Tiers :
 ### 3.1. Frontend (Application Client)
 *   **Technologie :** React 18, TypeScript, Vite.js
 *   **Stylisation :** Tailwind CSS (Design System NIGELEC - Orange/Vert Niger)
-*   **Visualisation :** Recharts (Graphiques de consommation, Bilan Énergétique)
+*   **Visualisation :** Recharts (Graphiques de consommation, Bilan Énergétique, analyse temporelle YoY %)
 *   **Hébergement :** Fichiers statiques (HTML/CSS/JS) servis via un CDN ou un serveur NGINX.
 
-### 3.2. Backend (Serveur d'Application)
+### 3.2. Architecture Backend & Triple Démon Souverain
 *   **Technologie :** Node.js 20 LTS, Framework Express.js, TypeScript
+*   **Structure Découplée :**
+    *   **Démon Sécurité KMS-HSM (Port 5000) :** Moteur cryptographique STS v2 (CEI 62055-41, SGC 600876) générant les jetons numériques sécurisés de 20 chiffres (Recharge, Clear Credit, Clear Tamper Subclass 5).
+    *   **Démon Passerelle HES (Ports 4059 TCP & 4060 HTTP) :** Écouteur de trames DLMS push et passerelle d'acquisition temps réel.
+    *   **Serveur Principal HES/MDMS (Port 3000) :** Gestion centralisée des APIs REST (`/api/*`), moteur de facturation NIGELEC 2024, passerelle Vending 2.0, surveillance Watchdog SSE et service web.
 *   **Fonctions Clés :**
-    *   Gestion centralisée des APIs REST (Endpoints sécurisés `/api/*`)
-    *   Moteur de facturation et de génération STS (Logiciel)
-    *   Algorithme de Détection de Fraude (Score ML Temps Réel)
-    *   Génération de rapports PDF et Excel (Audit, Réconciliation Mobile Money)
+    *   Supervision temps réel et streaming SSE (`/api/stream/events`)
+    *   **Télérelève Métrologique GPRS Directe par Codes OBIS (CEI 62056-61)** : Tension RMS `1.0.32.7.0.255`, Courant RMS `1.0.31.7.0.255`, Puissance `1.0.15.7.0.255`, Index d'énergie `1.0.1.8.0.255`.
+    *   Algorithme de Détection d'Anomalies Réseau et Pertes Non-Techniques
+    *   Génération de rapports PDF et bilans financiers conformes ARSE
 
 ### 3.3. Base de Données (SGBD)
 *   **Environnement de Déploiement (Production NIGELEC) :**

@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart as RePieChart, Pie, Legend
 } from 'recharts';
-import { AlertCircle, TrendingDown, TrendingUp, ShieldAlert, Zap, Coins, Activity, AlertTriangle, Eye, X } from 'lucide-react';
+import { AlertCircle, TrendingDown, TrendingUp, ShieldAlert, Zap, Coins, Activity, AlertTriangle, Eye, X, Download } from 'lucide-react';
 import { Alert, Token, Payment, Meter } from '../types';
 
 interface AnalyticsSectionProps {
@@ -15,7 +15,7 @@ interface AnalyticsSectionProps {
   alerts: Alert[];
   tokens?: Token[];
   payments?: Payment[];
-  onSimulateAnomaly: () => void;
+  onSimulateAnomaly?: () => void;
   setViewingMeter?: (m: Meter) => void;
   setCurrentSection?: (s: string) => void;
 }
@@ -25,7 +25,7 @@ const cn = (...inputs: any[]) => inputs.filter(Boolean).join(' ');
 const PALETTE = ['#ff6b35', '#00A651', '#3b82f6', '#a855f7', '#f59e0b', '#ec4899'];
 
 export const AnalyticsSection = ({
-  meters, alerts, tokens = [], payments = [], onSimulateAnomaly,
+  meters, alerts, tokens = [], payments = [],
   setViewingMeter, setCurrentSection
 }: AnalyticsSectionProps) => {
   const [auditMeter, setAuditMeter] = useState<Meter | null>(null);
@@ -88,11 +88,11 @@ export const AnalyticsSection = ({
       const region = Object.keys(regions).find(r => loc.includes(r)) || 'Niamey';
       regions[region].metered += t.kwh || 0;
     });
-    // Injection simulée légèrement supérieure (pertes techniques + commerciales)
+    // Répartition de consommation mesurée par région (données réelles reçues)
     return Object.entries(regions).map(([name, v]) => {
       const metered  = Math.round(v.metered);
-      const injected = Math.round(metered * (1 + (Math.random() * 0.15 + 0.05)));
-      const loss     = injected > 0 ? Math.round(((injected - metered) / injected) * 100 * 10) / 10 : 0;
+      const injected = metered;
+      const loss     = 0.0;
       return { areaName: name, injectedKwh: injected, meteredKwh: metered, lossPercentage: loss };
     });
   }, [tokens, meters]);
@@ -162,16 +162,23 @@ export const AnalyticsSection = ({
   const totalTokens   = tokens.length;
   const avgKwhPerTx   = totalTokens > 0 ? (totalKwh / totalTokens).toFixed(2) : '0';
 
-  // Variation 30 vs 60 jours
+  // Variation réelle 30 vs 60 jours
   const now     = Date.now();
   const last30  = tokens.filter(t => now - new Date(t.timestamp).getTime() < 30 * 86400000);
   const prev30  = tokens.filter(t => {
     const age = now - new Date(t.timestamp).getTime();
     return age >= 30 * 86400000 && age < 60 * 86400000;
   });
-  const trend30kwh = prev30.length > 0
-    ? ((last30.reduce((s,t)=>s+t.kwh,0) - prev30.reduce((s,t)=>s+t.kwh,0)) / prev30.reduce((s,t)=>s+t.kwh,0) * 100).toFixed(1)
-    : '0';
+  
+  const last30Kwh = last30.reduce((s, t) => s + (t.kwh || 0), 0);
+  const prev30Kwh = prev30.reduce((s, t) => s + (t.kwh || 0), 0);
+  const trend30kwh = prev30Kwh > 0 ? (((last30Kwh - prev30Kwh) / prev30Kwh) * 100).toFixed(1) : (last30Kwh > 0 ? '+100' : '0');
+
+  const last30Rev = last30.reduce((s, t) => s + t.amount, 0);
+  const prev30Rev = prev30.reduce((s, t) => s + t.amount, 0);
+  const trendRev = prev30Rev > 0 ? (((last30Rev - prev30Rev) / prev30Rev) * 100).toFixed(1) : (last30Rev > 0 ? '+100' : '0');
+
+  const trendTokens = prev30.length > 0 ? (((last30.length - prev30.length) / prev30.length) * 100).toFixed(1) : (last30.length > 0 ? '+100' : '0');
 
   return (
     <motion.div key="analytics" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 pb-12">
@@ -190,10 +197,19 @@ export const AnalyticsSection = ({
         </div>
         <div className="flex gap-4">
           <button
-            onClick={onSimulateAnomaly}
-            className="px-6 py-3 bg-red-600/10 border border-red-600/30 rounded-2xl text-[10px] font-black text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-xl flex items-center gap-2 group"
+            onClick={() => {
+              const csvData = "Période;Région;KWh_Injectes;KWh_Mesures;Pertes_%\n" +
+                energyBalanceData.map((b: any) => `2026-08;${b.areaName};${b.injectedKwh};${b.meteredKwh};${b.lossPercentage}%`).join("\n");
+              const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `bilan_analytique_nigelec_2026.csv`;
+              a.click();
+            }}
+            className="px-6 py-3 bg-brand/10 border border-brand/30 rounded-2xl text-[10px] font-black text-brand hover:bg-brand hover:text-white transition-all shadow-xl flex items-center gap-2 group cursor-pointer"
           >
-            <AlertTriangle size={16} className="group-hover:animate-pulse" /> SIMULATEUR FRAUDE
+            <Download size={16} /> EXPORTER BILAN ANALYTIQUE
           </button>
         </div>
       </div>
@@ -201,10 +217,10 @@ export const AnalyticsSection = ({
       {/* ── KPI Cards ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Énergie Livrée (kWh)', value: totalKwh.toFixed(1), unit: 'kWh', icon: Zap, color: 'text-white', bg: 'from-brand/10', trend: '+12.5%', trendColor: 'text-green-400' },
-          { label: 'Chiffre d\'Affaires', value: totalRevenue.toLocaleString(), unit: 'FCFA', icon: Coins, color: 'text-green-400', bg: 'from-green-500/10', trend: '+5.2%', trendColor: 'text-green-400' },
-          { label: 'Transactions STS', value: totalTokens.toString(), unit: 'tokens', icon: Activity, color: 'text-blue-400', bg: 'from-blue-500/10', trend: '+8.1%', trendColor: 'text-green-400' },
-          { label: 'Taux Pertes National', value: avgLoss, unit: '%', icon: TrendingDown, color: 'text-orange-400', bg: 'from-orange-500/10', trend: '-0.5%', trendColor: 'text-green-400' },
+          { label: 'Énergie Livrée (kWh)', value: totalKwh.toFixed(1), unit: 'kWh', icon: Zap, color: 'text-white', bg: 'from-brand/10', trend: `${trend30kwh}%`, trendColor: Number(trend30kwh) >= 0 ? 'text-green-400' : 'text-red-400' },
+          { label: 'Chiffre d\'Affaires', value: totalRevenue.toLocaleString(), unit: 'FCFA', icon: Coins, color: 'text-green-400', bg: 'from-green-500/10', trend: `${trendRev}%`, trendColor: Number(trendRev) >= 0 ? 'text-green-400' : 'text-red-400' },
+          { label: 'Transactions STS', value: totalTokens.toString(), unit: 'tokens', icon: Activity, color: 'text-blue-400', bg: 'from-blue-500/10', trend: `${trendTokens}%`, trendColor: Number(trendTokens) >= 0 ? 'text-green-400' : 'text-red-400' },
+          { label: 'Taux Pertes National', value: avgLoss, unit: '%', icon: TrendingDown, color: 'text-orange-400', bg: 'from-orange-500/10', trend: '0.0%', trendColor: 'text-green-400' },
         ].map((k, i) => (
           <div key={i} className={cn("glass-panel p-6 rounded-3xl border border-white/5 bg-gradient-to-br to-transparent relative overflow-hidden group", k.bg)}>
             <div className="flex items-center justify-between mb-4">
@@ -249,7 +265,7 @@ export const AnalyticsSection = ({
           </div>
         ) : (
           <div className="h-[300px] w-full relative overflow-hidden" style={{ minHeight: '300px', minWidth: '0' }}>
-            <ResponsiveContainer width="100%" height={300} debounce={50}>
+            <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
               <AreaChart data={consumptionTrend.filter((_, i) => i % 3 === 0 || i === consumptionTrend.length - 1)}>
                 <defs>
                   <linearGradient id="gKwh" x1="0" y1="0" x2="0" y2="1">
@@ -286,7 +302,7 @@ export const AnalyticsSection = ({
           ) : (
             <>
               <div className="h-[180px] w-full relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
-                <ResponsiveContainer width="100%" height={180} debounce={50}>
+                <ResponsiveContainer width="100%" height={180} minWidth={0} debounce={50}>
                   <BarChart data={segmentDistrib} barSize={36}>
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6b7280' }} />
@@ -319,7 +335,7 @@ export const AnalyticsSection = ({
           ) : (
             <>
               <div className="h-[180px] w-full relative overflow-hidden" style={{ minHeight: '180px', minWidth: '0' }}>
-                <ResponsiveContainer width="100%" height={180} debounce={50}>
+                <ResponsiveContainer width="100%" height={180} minWidth={0} debounce={50}>
                   <RePieChart>
                     <Pie data={channelData} innerRadius={55} outerRadius={75} paddingAngle={5} dataKey="value" strokeWidth={0}>
                       {channelData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
@@ -402,7 +418,7 @@ export const AnalyticsSection = ({
             </table>
           </div>
           <div className="h-[260px] bg-white/[0.02] rounded-2xl p-4 border border-white/5 relative overflow-hidden" style={{ minHeight: '260px', minWidth: '0' }}>
-            <ResponsiveContainer width="100%" height={260} debounce={50}>
+            <ResponsiveContainer width="100%" height={260} minWidth={0} debounce={50}>
               <BarChart data={energyBalanceData} barGap={4}>
                 <XAxis dataKey="areaName" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#6b7280' }} />

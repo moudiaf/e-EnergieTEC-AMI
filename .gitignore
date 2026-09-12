@@ -23,6 +23,8 @@ coverage/
 .windsurf
 
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.zip
 scratch/

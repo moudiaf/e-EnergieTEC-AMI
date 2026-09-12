@@ -1,6 +1,6 @@
 # 📘 Guide d'Expert : Intégration de Nouveaux Compteurs (FUTURISE & Hexing)
 
-Ce guide détaille la procédure technique pour intégrer des compteurs communicants de marques tierces comme **FUTURISE** ou **Hexing** dans l'écosystème **e-EnergieTEC v4.0**.
+Ce guide détaille la procédure technique pour intégrer des compteurs communicants de marques tierces comme **FUTURISE** ou **Hexing** dans l'écosystème **e-EnergieTEC v6.5 Souveraine**.
 
 ---
 
@@ -26,8 +26,24 @@ La plateforme utilise le standard **IEC 62056 (DLMS/COSEM)**. Pour chaque nouvea
 | :--- | :--- | :--- |
 | **Physical Address** | Dérivée du numéro de série | Adresse MAC/ID physique du compteur. |
 | **Logical Address** | `1` (Public) ou `16` (Management) | Point d'accès aux données. |
-| **Authentication** | HLS5 (GMAC) | Niveau de sécurité pour la lecture/écriture. |
-| **OBIS Codes** | `1.0.1.8.0.255` (Énergie active +) | Identifiants des registres de données. |
+| **Authentication** | HLS5 (GMAC) ou LLC (Password) | Niveau de sécurité pour la lecture/écriture. |
+| **Transport** | TCP/IP Wrapper (IEC 62056-47) | Port 4059 (Passerelle Souveraine) ou 4680 (HES Cloud). |
+
+### Registres OBIS Métrologiques Essentiels (CEI 62056-61) :
+
+| Grandeur Métrologique | Code OBIS COSEM | Unité | Rôle dans e-EnergieTEC |
+| :--- | :---: | :---: | :--- |
+| **Tension Instantanée Phase L1** | `1.0.32.7.0.255` | V RMS | Détection des baisses de tension / surtensions réseau |
+| **Tension Instantanée Phase L2** | `1.0.52.7.0.255` | V RMS | Mesure composée L-L triphasée (Nominal 400V) |
+| **Tension Instantanée Phase L3** | `1.0.72.7.0.255` | V RMS | Calcul du taux de déséquilibre de tension |
+| **Courant Instantané Phase L1** | `1.0.31.7.0.255` | A RMS | Suivi de l'appel de charge en temps réel |
+| **Puissance Active Totale (+P)** | `1.0.15.7.0.255` | W / kW | Facturation de pointe et surveillance dépassement |
+| **Énergie Active Importée (+A)** | `1.0.1.8.0.255` | kWh | Index cumulatif officiel de facturation |
+| **Solde de Crédit Résiduel** | `0.0.19.40.0.255` | kWh | Compteur prépayé STS (décrémentation en continu) |
+| **Facteur de Puissance ($\cos\varphi$)** | `1.0.33.7.0.255` | Sans dim. | Détection de charges réactives inductives |
+| **Fréquence Réseau** | `1.0.14.7.0.255` | Hz | Norme 50 Hz Niger |
+| **Objet Disjoncteur (Relais)** | `0.0.96.3.10.255` | Binaire | État 0: Ouvert (Coupé) / État 1: Fermé (Alimenté) |
+| **Registre Anti-Fraude (Tamper)** | `0.0.96.11.0.255` | Registre | Détection d'effraction capot ou bornier |
 
 ---
 

@@ -31,6 +31,7 @@ export interface Meter {
   type: 'domestic' | 'commercial' | 'industrial' | 'social' | 'haute_tension' | 'eclairage_public';
   credit: number;
   status: 'online' | 'warning' | 'offline' | 'danger';
+  relayStatus?: 'OPEN' | 'CLOSED';
 
   lastUpdate: string;
   power: number;
@@ -60,6 +61,7 @@ export interface Meter {
   registeredAt?: string;
   phaseType?: 'monophase' | 'triphase'; // Single-phase (1φ) or Three-phase (3φ)
   transformerId?: string; // Link to the power transformer (DTU level)
+  totalConsumption?: number; // Total active energy consumed in kWh (OBIS 1.0.1.8.0.255)
 }
 
 export interface DCU {
@@ -133,6 +135,7 @@ export interface Tariff {
 
 export type Section =
   | 'dashboard'
+  | 'statistics'
   | 'sts-prepaid'
   | 'meters'
   | 'customers'
@@ -156,7 +159,8 @@ export type Section =
   | 'assets'
   | 'api-docs'
   | 'security'
-  | 'revenue-assurance';
+  | 'revenue-assurance'
+  | 'vending';
 
 export interface IntervalData {
   id: string;
@@ -226,6 +230,7 @@ export interface User {
   username: string;
   role: 'admin' | 'manager' | 'vendor' | 'tech' | 'customer' | 'billing' | 'auditor';
   name: string;
+  email?: string;
   associatedCustomerId?: string; // For customer role
 }
 
@@ -292,3 +297,28 @@ export interface EnergyBalance {
   lossPercentage: number;
   timestamp: string;
 }
+
+export interface Vending2Transaction {
+  id: string;
+  meterNo: string;
+  customerId?: string;
+  amount: number;
+  currency: string;
+  operationType: 'RECHARGE' | 'TOKEN_MANAGE';
+  subClass?: number;
+  provider: 'VENDING2';
+  providerRequestId?: string;
+  providerFlowNo?: string;
+  providerCode?: number;
+  providerMsg?: string;
+  providerStatus?: string;
+  status: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' | 'UNKNOWN' | 'CANCELLED';
+  token?: string;
+  explain?: string;
+  requestDate: string;
+  responseDate?: string;
+  createdBy?: string;
+  failureReason?: string;
+  auditLog?: string;
+}
+

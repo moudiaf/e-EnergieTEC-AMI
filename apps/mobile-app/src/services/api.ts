@@ -115,17 +115,13 @@ export const ApiService = {
       };
 
     } catch (error: any) {
-      console.warn("[API] Connexion backend impossible pour l'achat. Fallback simulation locale.", error);
-      // Fallback local
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            success: true,
-            token: `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
-            newCredit: amount / 100
-          });
-        }, 800);
-      });
+      console.error("[API] Échec d'émission du jeton STS :", error);
+      return {
+        success: false,
+        error: error.message || "Serveur central NIGELEC / KMS-HSM injoignable. Transaction refusée pour des raisons de sécurité.",
+        token: "",
+        newCredit: 0
+      };
     }
   }
 };

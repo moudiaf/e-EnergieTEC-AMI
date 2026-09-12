@@ -42,4 +42,4 @@ Ngrok va afficher une ligne nommée **Forwarding** :
 3. **Sécurité** : Ngrok utilise le protocole HTTPS, ce qui garantit que les données (jetons STS, infos clients) sont chiffrées entre votre PC et le téléphone des décideurs.
 
 ---
-*Procédure générée pour la mise en service rapide de e-EnergieTEC v5.0.*
+*Procédure certifiée pour la mise en service et démonstration de e-EnergieTEC v6.5 Souveraine.*

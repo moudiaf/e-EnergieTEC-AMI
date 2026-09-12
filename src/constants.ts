@@ -1,62 +1,8 @@
 import { Customer, Meter, Tariff, Alert } from './types';
 
-export const INITIAL_CUSTOMERS: Customer[] = [
-  {
-    id: 'C001',
-    name: 'Jean Dupont',
-    email: 'jean.dupont@email.com',
-    phone: '06 12 34 56 78',
-    type: 'domestic',
-    meters: 1,
-    credit: 45.20,
-    address: '12 Rue de la Paix, Paris',
-    joinDate: '2023-01-15',
-    status: 'active'
-  },
-  {
-    id: 'C002',
-    name: 'Marie Martin',
-    email: 'marie.martin@email.com',
-    phone: '06 23 45 67 89',
-    type: 'domestic',
-    meters: 1,
-    credit: 12.50,
-    address: '45 Avenue des Champs-Élysées, Paris',
-    joinDate: '2023-03-20',
-    status: 'active'
-  },
-  {
-    id: 'C003',
-    name: 'Commerce ABC',
-    email: 'contact@abc.fr',
-    phone: '01 45 67 89 01',
-    type: 'commercial',
-    meters: 2,
-    credit: 234.80,
-    address: '88 Boulevard Haussmann, Paris',
-    joinDate: '2022-11-05',
-    status: 'active'
-  },
-  {
-    id: 'C004',
-    name: 'Industrie XYZ',
-    email: 'admin@xyz.fr',
-    phone: '01 56 78 90 12',
-    type: 'industrial',
-    meters: 5,
-    credit: 1245.00,
-    address: 'Zone Industrielle Nord, Lyon',
-    joinDate: '2021-06-12',
-    status: 'active'
-  }
-];
+export const INITIAL_CUSTOMERS: Customer[] = [];
 
-export const INITIAL_METERS: Meter[] = [
-  { id: '541-234-567', customerId: 'C001', location: 'Résidence A - Apt 101', type: 'domestic', credit: 45.20, status: 'online', lastUpdate: '2 min', power: 2.4, voltage: 230, firmware: 'v2.4.1', installationDate: '2023-01-16', lifecycleStatus: 'installed' },
-  { id: '541-234-568', customerId: 'C002', location: 'Résidence A - Apt 102', type: 'domestic', credit: 12.50, status: 'warning', lastUpdate: '5 min', power: 1.8, voltage: 230, firmware: 'v2.4.1', installationDate: '2023-03-21', lifecycleStatus: 'installed' },
-  { id: '541-234-569', customerId: 'C003', location: 'Commerce B - Zone 01', type: 'commercial', credit: 234.80, status: 'online', lastUpdate: '1 min', power: 8.5, voltage: 230, firmware: 'v2.5.0', installationDate: '2022-11-06', lifecycleStatus: 'installed' },
-  { id: '541-234-570', customerId: 'C004', location: 'Industrie C - Bât 5', type: 'industrial', credit: 1245.00, status: 'online', lastUpdate: '30 sec', power: 45.2, voltage: 400, firmware: 'v2.5.0', installationDate: '2021-06-13', lifecycleStatus: 'installed' }
-];
+export const INITIAL_METERS: Meter[] = [];
 
 // =================================================================
 // GRILLE TARIFAIRE OFFICIELLE NIGELEC - NIGER (Édition 2024)
@@ -215,9 +161,4 @@ export const TARIFFS: Record<string, Tariff> = {
   }
 };
 
-export const INITIAL_ALERTS: Alert[] = [
-  { id: '1', type: 'warning', category: 'credit', priority: 'Moyenne', title: 'Crédit faible détecté', message: 'Le compteur 541-234-568 dispose de moins de 1 500 FCFA de crédit', timestamp: new Date(Date.now() - 600000), status: 'unread' },
-  { id: '2', type: 'danger', category: 'credit', priority: 'Haute', title: 'Crédit critique', message: 'Le compteur 541-234-571 dispose de seulement 320 FCFA - Recharge urgente', timestamp: new Date(Date.now() - 900000), status: 'unread' },
-  { id: '3', type: 'success', category: 'vending', priority: 'Basse', title: 'Token généré avec succès', message: 'Recharge de 5 000 FCFA effectuée pour le compteur 541-234-567', timestamp: new Date(Date.now() - 7200000), status: 'read' },
-  { id: '4', type: 'info', category: 'system', priority: 'Basse', title: 'Mise à jour tarifaire', message: 'Les tarifs NIGELEC ont été synchronisés avec succès', timestamp: new Date(Date.now() - 18000000), status: 'read' }
-];
+export const INITIAL_ALERTS: Alert[] = [];

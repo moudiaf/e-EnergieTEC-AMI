@@ -72,6 +72,7 @@ export const SQLITE_SCHEMA = `
     lastTid INTEGER DEFAULT 0,
     ipAddress TEXT,
     macAddress TEXT,
+    relayStatus TEXT DEFAULT 'CLOSED',
     FOREIGN KEY(customerId) REFERENCES customers(id),
     FOREIGN KEY(dcuId) REFERENCES dcus(id)
   );
@@ -231,9 +232,35 @@ export const SQLITE_SCHEMA = `
     FOREIGN KEY(meterId) REFERENCES meters(id)
   );
 
+  CREATE TABLE IF NOT EXISTS vending2_transactions (
+    id TEXT PRIMARY KEY,
+    meterNo TEXT NOT NULL,
+    customerId TEXT,
+    amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'FCFA',
+    operationType TEXT NOT NULL,
+    subClass INTEGER,
+    provider TEXT DEFAULT 'VENDING2',
+    providerRequestId TEXT,
+    providerFlowNo TEXT,
+    providerCode INTEGER,
+    providerMsg TEXT,
+    providerStatus TEXT,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    token TEXT,
+    explain TEXT,
+    requestDate TEXT NOT NULL,
+    responseDate TEXT,
+    createdBy TEXT,
+    failureReason TEXT,
+    auditLog TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_interval_meter_time ON interval_data(meterId, timestamp);
   CREATE INDEX IF NOT EXISTS idx_tickets_assigned ON tickets(assignedTo);
   CREATE INDEX IF NOT EXISTS idx_tokens_meter ON tokens(meterId);
+  CREATE INDEX IF NOT EXISTS idx_vending2_meter ON vending2_transactions(meterNo);
+  CREATE INDEX IF NOT EXISTS idx_vending2_status ON vending2_transactions(status);
 `;
 
 export const POSTGRES_SCHEMA = `
@@ -305,7 +332,8 @@ export const POSTGRES_SCHEMA = `
     transformerId VARCHAR(255),
     lastTid INTEGER DEFAULT 0,
     ipAddress VARCHAR(50),
-    macAddress VARCHAR(50)
+    macAddress VARCHAR(50),
+    relayStatus VARCHAR(50) DEFAULT 'CLOSED'
   );
 
   CREATE TABLE IF NOT EXISTS tokens (
@@ -459,7 +487,33 @@ export const POSTGRES_SCHEMA = `
     voltageUnbalance DOUBLE PRECISION
   );
 
+  CREATE TABLE IF NOT EXISTS vending2_transactions (
+    id VARCHAR(255) PRIMARY KEY,
+    meterNo VARCHAR(255) NOT NULL,
+    customerId VARCHAR(255),
+    amount DOUBLE PRECISION DEFAULT 0,
+    currency VARCHAR(10) DEFAULT 'FCFA',
+    operationType VARCHAR(50) NOT NULL,
+    subClass INTEGER,
+    provider VARCHAR(50) DEFAULT 'VENDING2',
+    providerRequestId VARCHAR(255),
+    providerFlowNo VARCHAR(255),
+    providerCode INTEGER,
+    providerMsg TEXT,
+    providerStatus VARCHAR(50),
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    token VARCHAR(100),
+    explain TEXT,
+    requestDate VARCHAR(50) NOT NULL,
+    responseDate VARCHAR(50),
+    createdBy VARCHAR(255),
+    failureReason TEXT,
+    auditLog TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_interval_meter_time ON interval_data(meterId, timestamp);
   CREATE INDEX IF NOT EXISTS idx_tickets_assigned ON tickets(assignedTo);
   CREATE INDEX IF NOT EXISTS idx_tokens_meter ON tokens(meterId);
+  CREATE INDEX IF NOT EXISTS idx_vending2_meter ON vending2_transactions(meterNo);
+  CREATE INDEX IF NOT EXISTS idx_vending2_status ON vending2_transactions(status);
 `;

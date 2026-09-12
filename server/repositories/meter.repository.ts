@@ -6,7 +6,34 @@ export const MeterRepository = {
     return await db.prepare("SELECT * FROM meters").all() as Meter[];
   },
   async getById(id: string): Promise<Meter | undefined> {
-    return await db.prepare("SELECT * FROM meters WHERE id = ?").get(id) as Meter | undefined;
+    return await db.prepare("SELECT * FROM meters WHERE id = ? OR serialNumber = ?").get(id, id) as Meter | undefined;
+  },
+  async update(id: string, m: any): Promise<void> {
+    await db.prepare(`
+      UPDATE meters SET 
+        customerId = COALESCE(?, customerId),
+        location = COALESCE(?, location),
+        type = COALESCE(?, type),
+        credit = COALESCE(?, credit),
+        status = COALESCE(?, status),
+        power = COALESCE(?, power),
+        voltage = COALESCE(?, voltage),
+        firmware = COALESCE(?, firmware),
+        latitude = COALESCE(?, latitude),
+        longitude = COALESCE(?, longitude),
+        dcuId = COALESCE(?, dcuId),
+        phaseType = COALESCE(?, phaseType),
+        subscribedPower = COALESCE(?, subscribedPower),
+        paymentMode = COALESCE(?, paymentMode),
+        protocol = COALESCE(?, protocol),
+        totalConsumption = COALESCE(?, totalConsumption)
+      WHERE id = ? OR serialNumber = ?
+    `).run(
+      m.customerId, m.location, m.type, m.credit, m.status, 
+      m.power, m.voltage, m.firmware, m.latitude, m.longitude, m.dcuId, m.phaseType,
+      m.subscribedPower, m.paymentMode, m.protocol, m.totalConsumption,
+      id, id
+    );
   },
   async updateTamperStatus(id: string, tamperStatus: string): Promise<void> {
     await db.prepare("UPDATE meters SET tamperStatus = ? WHERE id = ?").run(tamperStatus, id);

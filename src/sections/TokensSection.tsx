@@ -64,6 +64,41 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
     addToast('Token STS copié dans le presse-papier !', 'info');
   };
 
+  const exportToCSV = () => {
+    if (!tokens.length) {
+      addToast('Aucune transaction à exporter', 'info');
+      return;
+    }
+    const headers = ['ID_Transaction', 'Horodatage', 'Compteur', 'Client', 'Type', 'Montant_FCFA', 'Energie_kWh', 'Token_STS_20_Digits', 'Statut'];
+    const rows = filteredTokens.map(t => [
+      t.id,
+      format(parseDateSafe(t.timestamp), 'yyyy-MM-dd HH:mm:ss'),
+      t.meterId,
+      t.customerId || '',
+      t.type || 'recharge',
+      t.amount,
+      t.kwh,
+      `"${t.token}"`,
+      t.status || 'Actif'
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `journal_ventes_sts_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast('Journal des ventes STS exporté avec succès en CSV', 'success');
+  };
+
+  const handlePrintGlobalReport = () => {
+    window.print();
+  };
+
+  const totalSalesAll = useMemo(() => tokens.reduce((s, t) => s + t.amount, 0), [tokens]);
+  const totalKwhAll   = useMemo(() => tokens.reduce((s, t) => s + t.kwh, 0), [tokens]);
+
   return (
     <motion.div 
       key="tokens" 
@@ -75,32 +110,32 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/5 pb-8">
         <div>
           <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Historique des Ventes</h3>
-          <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest mt-1">
-            Journal fiduciaire et énergétique · Conformité Institutionnelle
+          <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mt-1">
+            Journal fiduciaire et énergétique STS · Conformité Réglementaire NIGELEC
           </p>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <div className="glass-panel px-6 py-3 rounded-2xl border-white/5 flex items-center gap-4 bg-brand/5">
             <div className="p-2 bg-brand/10 rounded-lg text-brand"><TrendingUp size={20} /></div>
             <div>
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Ventes Jour</p>
-              <p className="text-xl font-black text-white">{totalSalesToday.toLocaleString()} <span className="text-[10px] text-gray-500 font-bold">FCFA</span></p>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total Encaissé</p>
+              <p className="text-xl font-black text-white">{totalSalesAll.toLocaleString()} <span className="text-[10px] text-gray-500 font-bold">FCFA</span></p>
             </div>
           </div>
           <div className="glass-panel px-6 py-3 rounded-2xl border-white/5 flex items-center gap-4 bg-green-500/5">
             <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><Zap size={20} /></div>
             <div>
-              <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Énergie Jour</p>
-              <p className="text-xl font-black text-white">{totalKwhToday.toFixed(1)} <span className="text-[10px] text-gray-500 font-bold uppercase">kWh</span></p>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Énergie Délivrée</p>
+              <p className="text-xl font-black text-white">{totalKwhAll.toFixed(1)} <span className="text-[10px] text-gray-500 font-bold uppercase">kWh</span></p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Barre de Filtres ──────────────────────────────────── */}
+      {/* ── Barre de Filtres & Actions ────────────────────────── */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between glass-panel p-4 rounded-3xl border-white/5 shadow-xl">
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto flex-wrap">
           <div className="relative flex-1 md:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
             <input 
@@ -108,7 +143,7 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
               placeholder="Rechercher par Token, Compteur..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10 h-12 w-full md:w-72 font-bold text-sm" 
+              className="input-field pl-10 h-12 w-full md:w-72 font-bold text-sm bg-[#14151a] border-white/10 text-white rounded-2xl" 
             />
           </div>
           <div className="relative">
@@ -116,17 +151,31 @@ export const TokensSection = ({ tokens, handlePrintReceipt, addToast }: TokensSe
               type="date" 
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="input-field h-12 px-4 font-bold text-xs bg-white/5 border-white/5 text-gray-400" 
+              className="input-field h-12 px-4 font-bold text-xs bg-[#14151a] border-white/10 text-gray-300 rounded-2xl" 
             />
           </div>
+          {dateFilter && (
+            <button 
+              onClick={() => setDateFilter('')}
+              className="px-3 py-2 text-xs font-bold text-gray-400 hover:text-white bg-white/5 rounded-xl border border-white/10"
+            >
+              Effacer Date
+            </button>
+          )}
         </div>
         
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 text-xs font-black text-gray-400 hover:text-white uppercase tracking-widest">
-            <Download size={16} /> Export CSV
+          <button 
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/10 text-xs font-black text-gray-300 hover:text-white uppercase tracking-widest cursor-pointer shadow-lg"
+          >
+            <Download size={16} className="text-brand" /> Export CSV
           </button>
-          <button className="flex items-center gap-2 px-6 py-3 bg-brand/10 hover:bg-brand rounded-2xl transition-all border border-brand/20 text-xs font-black text-brand hover:text-white uppercase tracking-widest">
-            <Printer size={16} /> Rapport Global
+          <button 
+            onClick={handlePrintGlobalReport}
+            className="flex items-center gap-2 px-5 py-3 bg-brand/10 hover:bg-brand text-brand hover:text-white rounded-2xl transition-all border border-brand/30 text-xs font-black uppercase tracking-widest cursor-pointer shadow-lg"
+          >
+            <Printer size={16} /> Imprimer Journal
           </button>
         </div>
       </div>
