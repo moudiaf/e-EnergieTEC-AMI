@@ -501,6 +501,15 @@ export class FuturiseApiClient {
           if (typeof item.lastTotal === 'number') {
             json.parsedTelemetry.remainingCreditKwh = item.lastTotal;
           }
+          if (item.MeterCoverOpen === 1 || item.MeterCoverOpen === "1") {
+            json.parsedTelemetry.meterCoverOpen = true;
+          }
+          if (item.TerminalCoverOpen === 1 || item.TerminalCoverOpen === "1") {
+            json.parsedTelemetry.terminalCoverOpen = true;
+          }
+          if (json.parsedTelemetry.meterCoverOpen || json.parsedTelemetry.terminalCoverOpen) {
+            json.parsedTelemetry.tamperStatus = 'detected';
+          }
         }
       } catch (mvErr: any) {
         console.warn(`[FUTURISE API WARN] Échec lecture /metervalue summary: ${mvErr.message}`);
@@ -535,6 +544,22 @@ export class FuturiseApiClient {
         const pCalculated = +(json.parsedTelemetry.voltageA * json.parsedTelemetry.currentA * 0.77).toFixed(1);
         json.parsedTelemetry.powerW = pCalculated;
         json.parsedTelemetry.powerA = +(pCalculated / 1000).toFixed(3);
+      }
+
+      // 6. Détection d'Alarme Physique & Fraude Matérielle Réelle (OBIS 1.0.97.129.0.255)
+      try {
+        const obisAlarm = await this.readObis(cleanMeterNo, "1.0.97.129.0.255", "Meter Event Alarm Status");
+        if (obisAlarm && obisAlarm.result) {
+          const resStr = obisAlarm.result.toLowerCase();
+          if (resStr.includes('alarm') || resStr.includes('terminal cover') || resStr.includes('cover')) {
+            console.log(`[FUTURISE API] 🚨 ALERTE MATÉRIELLE RÉELLE DÉTECTÉE SUR ${cleanMeterNo}: ${obisAlarm.result}`);
+            json.parsedTelemetry.terminalCoverOpen = true;
+            json.parsedTelemetry.tamperStatus = 'detected';
+            json.parsedTelemetry.relayStatus = 'OPEN';
+          }
+        }
+      } catch (alarmErr: any) {
+        console.warn(`[FUTURISE API WARN] Échec lecture alarme physique: ${alarmErr.message}`);
       }
     } catch (enrichErr: any) {
       console.warn(`[FUTURISE API WARN] Enrichissement OBIS direct ignoré: ${enrichErr.message}`);

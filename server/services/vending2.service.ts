@@ -446,7 +446,7 @@ export const vending2Service = {
         ? meter.totalConsumption
         : 0;
 
-    const updatedTamperStatus = (realHesTelemetry.meterCoverOpen || realHesTelemetry.terminalCoverOpen)
+    const updatedTamperStatus = (realHesTelemetry.meterCoverOpen || realHesTelemetry.terminalCoverOpen || realHesTelemetry.tamperStatus === 'detected')
       ? 'tampered'
       : (meter.tamperStatus || 'clear');
 
@@ -483,7 +483,7 @@ export const vending2Service = {
     );
 
     // Si sabotage détecté, consigner l'alerte de fraude
-    if (realHesTelemetry.meterCoverOpen || realHesTelemetry.terminalCoverOpen) {
+    if (realHesTelemetry.meterCoverOpen || realHesTelemetry.terminalCoverOpen || realHesTelemetry.tamperStatus === 'detected') {
       try {
         const existingAlert = await db.prepare(
           "SELECT id FROM alerts WHERE meterId = ? AND category = 'fraud' AND status = 'ACTIVE'"
