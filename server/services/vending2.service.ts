@@ -504,10 +504,51 @@ export const vending2Service = {
       }
     }
 
-    // 4. Lire les dernières lectures interval_data si disponibles
-    const lastInterval = await db.prepare(
+    // 4. Enregistrement automatique dans interval_data pour archivage historique continu
+    let lastInterval = await db.prepare(
       "SELECT * FROM interval_data WHERE meterId = ? ORDER BY timestamp DESC LIMIT 1"
     ).get(cleanMeterNo) as any;
+
+    try {
+      const prevReading = lastInterval ? (lastInterval.reading || 0) : 0;
+      const consumptionDelta = (totalConsumptionKwh > prevReading && prevReading > 0)
+        ? +(totalConsumptionKwh - prevReading).toFixed(3)
+        : 0;
+
+      const newIntervalId = `INT-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      await db.prepare(`
+        INSERT INTO interval_data (
+          id, meterId, timestamp, reading, consumption, voltage, current, powerFactor, status,
+          voltageL1, voltageL2, voltageL3, currentL1, currentL2, currentL3
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        newIntervalId,
+        cleanMeterNo,
+        nowIso,
+        totalConsumptionKwh,
+        consumptionDelta,
+        voltage,
+        parseFloat(currentA.toFixed(3)),
+        powerFactor,
+        'VALID',
+        voltage,
+        realHesTelemetry?.voltageB || (isTriphase ? voltage : 0),
+        realHesTelemetry?.voltageC || (isTriphase ? voltage : 0),
+        currentA,
+        realHesTelemetry?.currentB || (isTriphase ? currentA : 0),
+        realHesTelemetry?.currentC || (isTriphase ? currentA : 0)
+      );
+
+      lastInterval = {
+        id: newIntervalId,
+        meterId: cleanMeterNo,
+        timestamp: nowIso,
+        reading: totalConsumptionKwh,
+        consumption: consumptionDelta
+      };
+    } catch (intErr: any) {
+      console.warn(`[HES] Erreur insertion interval_data:`, intErr.message);
+    }
 
     // 5. Construire la réponse télémétrique normalisée (format OBIS DLMS/COSEM)
     const telemetry = {
@@ -653,6 +694,66 @@ export const vending2Service = {
 
     await auditService.log('VENDING2_CLOCK_SYNC', `Synchronisation horloge RTC DLMS/COSEM exécutée pour ${cleanMeterNo}`, operatorUser);
     return result;
+  },
+
+  /**
+   * Synchronisation automatique des recharges et crédits depuis le serveur central Futurise HES
+   */
+  async syncFuturiseRecharges(meterNos?: string[]) {
+    try {
+      const targetMeters = meterNos && meterNos.length > 0
+        ? meterNos
+        : (await db.prepare("SELECT id FROM meters").all() as any[]).map(m => m.id);
+
+      const existingTokens = await db.prepare('SELECT rawToken, token FROM tokens').all() as any[];
+      const existingSet = new Set<string>();
+      for (const t of existingTokens) {
+        if (t.rawToken) existingSet.add(t.rawToken.replace(/[\s-]/g, ''));
+        if (t.token) existingSet.add(t.token.replace(/[\s-]/g, ''));
+      }
+
+      let totalSynced = 0;
+      for (const meterId of targetMeters) {
+        try {
+          const res = await fetch(`https://dlms.futurise-tech.com:4680/api/v1/recharge?meterNo=${meterId}&pageSize=100`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await futuriseApiClient.getValidToken()}`
+            }
+          });
+          const json = await res.json() as any;
+          const list = json?.data?.list || [];
+
+          for (const item of list) {
+            const rawForm = (item.form || '').replace(/[\s-]/g, '');
+            if (!rawForm || rawForm.length < 16) continue;
+            if (existingSet.has(rawForm)) continue;
+
+            const kwh = Number(item.money || 0);
+            if (kwh <= 0 || kwh > 500) continue;
+
+            const formatted = rawForm.match(/.{1,4}/g)?.join('-') || rawForm;
+            const amount = Math.round(kwh * 98.7);
+            const isoDate = item.buyTime ? new Date(item.buyTime).toISOString() : new Date().toISOString();
+            const tokenId = `TOK-FUTURISE-${item.id || Date.now()}`;
+
+            await db.prepare(`
+              INSERT INTO tokens (id, token, rawToken, amount, kwh, meterId, customerId, timestamp, status, type)
+              VALUES (?, ?, ?, ?, ?, ?, 'CUST-Z8RD', ?, 'used', 'recharge')
+            `).run(tokenId, formatted, rawForm, amount, kwh, meterId, isoDate);
+
+            existingSet.add(rawForm);
+            totalSynced++;
+          }
+        } catch (mErr: any) {
+          console.warn(`[HES SYNC] Échec sync pour ${meterId}:`, mErr.message);
+        }
+      }
+      return { success: true, totalSynced };
+    } catch (err: any) {
+      console.error("[HES SYNC ERROR]:", err.message);
+      return { success: false, error: err.message };
+    }
   },
 
   /**
