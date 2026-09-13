@@ -4,6 +4,47 @@ import { format } from 'date-fns';
 import { Meter, Customer, Invoice, Payment, Alert, Token, Shift } from '../types';
 
 /**
+ * Formate un nombre pour jsPDF de manière 100% compatible WinAnsi / ASCII
+ * Évite les espaces insécables U+202F et U+00A0 générés par toLocaleString()
+ * qui provoquent des bugs visuels ("4 3 / 1 9 0   F C F A") dans les polices standards PDF.
+ */
+export const formatPdfNumber = (val: number | string | undefined | null, decimals: number = 0): string => {
+  if (val === undefined || val === null || isNaN(Number(val))) return '0';
+  const num = Number(val);
+  const parts = num.toFixed(decimals).split('.');
+  // Séparateur de milliers avec un espace standard ASCII (code 32)
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return parts.join('.');
+};
+
+export const formatPdfFcfa = (val: number | string | undefined | null): string => {
+  return `${formatPdfNumber(val, 0)} FCFA`;
+};
+
+export const formatPdfKwh = (val: number | string | undefined | null, decimals: number = 2): string => {
+  return `${formatPdfNumber(val, decimals)} kWh`;
+};
+
+export const sanitizePdfText = (text: string | undefined | null): string => {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\u202F\u00A0]/g, ' ')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/≤/g, '<=')
+    .replace(/≥/g, '>=')
+    .replace(/[•·]/g, '-')
+    .replace(/…/g, '...');
+};
+
+export const savePdfDoc = (doc: jsPDF, filename: string) => {
+  if (typeof window !== 'undefined' && doc && typeof doc.save === 'function') {
+    doc.save(filename);
+  }
+};
+
+/**
  * Génère une facture PDF pour un client
  */
 export const generateInvoicePDF = (inv: Invoice, cust: Customer | undefined) => {
@@ -77,7 +118,7 @@ export const generateInvoicePDF = (inv: Invoice, cust: Customer | undefined) => 
   doc.setFontSize(14);
   doc.setTextColor(255, 107, 53);
   doc.setFont('helvetica', 'bold');
-  doc.text(`TOTAL À PAYER: ${inv.totalTTC.toLocaleString()} FCFA`, 120, finalY + 15);
+  doc.text(`TOTAL À PAYER: ${formatPdfFcfa(inv.totalTTC)}`, 120, finalY + 15);
   doc.save(`Facture_NIGELEC.pdf`);
   return doc;
 };
@@ -252,13 +293,13 @@ export const generateShiftReportPDF = (shift: Shift | any, payments: Payment[] =
       ['Caissier / Vendeur', shift?.userId || 'Agent NIGELEC Guichet 1', '-'],
       ['Période de Session', `${shift?.startTime ? format(new Date(shift.startTime), 'dd/MM/yyyy HH:mm') : '-'} au ${shift?.endTime ? format(new Date(shift.endTime), 'dd/MM/yyyy HH:mm') : dateStr}`, '-'],
       ['Statut Session', shift?.status === 'closed' ? 'CLÔTURÉE & RÉCONCILIÉE' : 'EN COURS', '-'],
-      ['Fond de Caisse Initial', 'Monnaie de départ physique', `${initialCash.toLocaleString()} FCFA`],
-      ['Total Ventes Espèces (Cash)', 'Encaissements physiques guichet', `${cashSales.toLocaleString()} FCFA`],
-      ['Total Ventes Digitales', 'Airtel Money / Moov / Orange', `${digitalSales.toLocaleString()} FCFA`],
-      ['Total Encaissé Global', 'Cash + Digital consolidé', `${(cashSales + digitalSales).toLocaleString()} FCFA`],
-      ['Montant Physique Attendu', 'Caisse théorique (Départ + Ventes Cash)', `${expectedCash.toLocaleString()} FCFA`],
-      ['Montant Physique Déclaré', 'Comptage réel en clôture', `${finalCash.toLocaleString()} FCFA`],
-      ['Écart de Caisse Constaté', gap === 0 ? 'CONFORME (ÉQUILIBRÉ - 0 FCFA)' : `${gap > 0 ? '+' : ''}${gap.toLocaleString()} FCFA`, `${gap.toLocaleString()} FCFA`]
+      ['Fond de Caisse Initial', 'Monnaie de départ physique', formatPdfFcfa(initialCash)],
+      ['Total Ventes Espèces (Cash)', 'Encaissements physiques guichet', formatPdfFcfa(cashSales)],
+      ['Total Ventes Digitales', 'Airtel Money / Moov / Orange', formatPdfFcfa(digitalSales)],
+      ['Total Encaissé Global', 'Cash + Digital consolidé', formatPdfFcfa(cashSales + digitalSales)],
+      ['Montant Physique Attendu', 'Caisse théorique (Départ + Ventes Cash)', formatPdfFcfa(expectedCash)],
+      ['Montant Physique Déclaré', 'Comptage réel en clôture', formatPdfFcfa(finalCash)],
+      ['Écart de Caisse Constaté', gap === 0 ? 'CONFORME (ÉQUILIBRÉ - 0 FCFA)' : `${gap > 0 ? '+' : ''}${formatPdfFcfa(gap)}`, formatPdfFcfa(gap)]
     ],
     theme: 'grid',
     headStyles: { fillColor: [255, 107, 53] },
@@ -286,8 +327,8 @@ export const generateEnergyLossReport = (energyBalanceData: any[]) => {
 
   const tableBody = energyBalanceData.map(b => [
     b.areaName,
-    `${(b.injectedKwh || 0).toLocaleString()} kWh`,
-    `${(b.meteredKwh || 0).toLocaleString()} kWh`,
+    formatPdfKwh(b.injectedKwh || 0, 0),
+    formatPdfKwh(b.meteredKwh || 0, 0),
     `${(b.lossPercentage || 0).toFixed(1)}%`,
     Number(b.lossPercentage) > 5 ? 'CRITIQUE' : 'NORMAL'
   ]);
@@ -362,8 +403,8 @@ export const generateMobileMoneyReport = (payments: Payment[]) => {
     startY: 50,
     head: [['Canal de Paiement', 'Volume Transigé (FCFA)', 'Nombre de Transactions', 'Statut Gateway']],
     body: [
-      ['Orange Money Niger (+227)', orangeTotal.toLocaleString() + ' FCFA', digitalPayments.filter(p => p.operator === 'Orange').length, 'RÉCONCILIÉ 100%'],
-      ['Airtel Money Niger (+227)', airtelTotal.toLocaleString() + ' FCFA', digitalPayments.filter(p => p.operator === 'Airtel').length, 'RÉCONCILIÉ 100%'],
+      ['Orange Money Niger (+227)', formatPdfFcfa(orangeTotal), digitalPayments.filter(p => p.operator === 'Orange').length, 'RÉCONCILIÉ 100%'],
+      ['Airtel Money Niger (+227)', formatPdfFcfa(airtelTotal), digitalPayments.filter(p => p.operator === 'Airtel').length, 'RÉCONCILIÉ 100%'],
       ['NITA Transfert', '0 FCFA', 0, 'EN VEILLE'],
       ['AMANA Express', '0 FCFA', 0, 'EN VEILLE']
     ],
@@ -479,13 +520,19 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
     head: [['Indicateur Clé', 'Valeur Consolidée', 'Périmètre & Référence', 'Statut Réseau']],
     body: [
       ['Compteurs Supervisés', `${options.metersCount} Unités`, 'Parc Smart Metering 50Hz', options.metersCount > 0 ? 'EN LIAISON' : 'AUCUN COMPTEUR'],
-      ['Volume Énergie Consolidé', `${totalKwh.toFixed(2)} kWh`, 'Télémesures & STS', totalKwh > 0 ? 'INDEX ENREGISTRÉS' : 'AUCUNE CHARGE'],
-      ['Chiffre d\'Affaires Ventes STS', `${totalRev.toLocaleString()} FCFA`, 'Guichet & Mobile Money', totalRev > 0 ? 'RÉCONCILIÉ' : 'AUCUNE VENTE'],
-      ['Tarif Moyen Appliqué', `${avgPrice} FCFA / kWh`, 'Grille Officielle NIGELEC 2024', 'CONFORME ARSE']
+      ['Volume Énergie Consolidé', `${formatPdfNumber(totalKwh, 2)} kWh`, 'Télémesures & STS', totalKwh > 0 ? 'INDEX ENREGISTRÉS' : 'AUCUNE CHARGE'],
+      ['Chiffre d\'Affaires Ventes STS', formatPdfFcfa(totalRev), 'Guichet & Mobile Money', totalRev > 0 ? 'RÉCONCILIÉ' : 'AUCUNE VENTE'],
+      ['Tarif Moyen Appliqué', `${formatPdfNumber(avgPrice, 0)} FCFA / kWh`, 'Grille Officielle NIGELEC 2024', 'CONFORME ARSE']
     ],
     theme: 'grid',
     headStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255], fontStyle: 'bold' },
-    styles: { fontSize: 8.5 }
+    styles: { fontSize: 8.5 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 55 },
+      1: { fontStyle: 'bold', textColor: [0, 80, 160], cellWidth: 45 },
+      2: { cellWidth: 55 },
+      3: { fontStyle: 'bold', textColor: [0, 140, 60] }
+    }
   });
 
   // ─── TABLEAU DE MATRICE DE CONSOMMATION ───────────────────────────
@@ -497,28 +544,25 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
 
   if (options.reportMode === 'monthly') {
     const tableHead = ['Zone', 'Abonné', 'N° Compteur', 'Alias', ...monthNamesShort, 'Total Année'];
-    const tableBody = options.rows.map(r => {
-      const monthVals = monthNamesShort.map((_, i) => (r.months?.[i + 1] || 0).toFixed(0));
+    const tableBody: any[] = options.rows.map(r => {
+      const monthVals = monthNamesShort.map((_, i) => formatPdfNumber(r.months?.[i + 1] || 0, 0));
       return [
         r.zoneName,
         r.userName,
         r.meterId,
         r.aliasName,
         ...monthVals,
-        (r.totalYearKwh || 0).toFixed(2)
+        formatPdfNumber(r.totalYearKwh || 0, 2)
       ];
     });
 
-    // Total row
-    const totalRowMonths = monthNamesShort.map((_, i) => (options.columnTotals[i + 1] || 0).toFixed(0));
+    // Total row with colSpan: 4 to prevent wrapping
+    const totalRowMonths = monthNamesShort.map((_, i) => formatPdfNumber(options.columnTotals[i + 1] || 0, 0));
     const grandTotal = options.rows.reduce((s, r) => s + (r.totalYearKwh || 0), 0);
     tableBody.push([
-      'TOTAL CONSOLIDÉ',
-      '-',
-      '-',
-      '-',
-      ...totalRowMonths,
-      grandTotal.toFixed(2)
+      { content: 'TOTAL CONSOLIDÉ', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 243, 246], textColor: [20, 20, 20] } },
+      ...totalRowMonths.map(v => ({ content: v, styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 243, 246] } })),
+      { content: formatPdfNumber(grandTotal, 2), styles: { fontStyle: 'bold', halign: 'right', textColor: [204, 102, 0], fillColor: [240, 243, 246] } }
     ]);
 
     autoTable(doc, {
@@ -526,12 +570,26 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
       head: [tableHead],
       body: tableBody,
       theme: 'striped',
-      headStyles: { fillColor: [28, 30, 38], textColor: [255, 170, 80], fontStyle: 'bold', fontSize: 7 },
-      styles: { fontSize: 6.5, cellPadding: 1.5 },
+      headStyles: { fillColor: [28, 30, 38], textColor: [255, 170, 80], fontStyle: 'bold', fontSize: 7, halign: 'center' },
+      styles: { fontSize: 6.5, cellPadding: 1.5, halign: 'center' },
       columnStyles: {
-        0: { fontStyle: 'bold' },
-        2: { fontStyle: 'bold', textColor: [0, 102, 204] },
-        16: { fontStyle: 'bold', textColor: [204, 102, 0] }
+        0: { fontStyle: 'bold', halign: 'left', cellWidth: 16 },
+        1: { halign: 'left', cellWidth: 20 },
+        2: { fontStyle: 'bold', textColor: [0, 102, 204], halign: 'left', cellWidth: 23 },
+        3: { halign: 'left', cellWidth: 22 },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' },
+        7: { halign: 'right' },
+        8: { halign: 'right' },
+        9: { halign: 'right' },
+        10: { halign: 'right' },
+        11: { halign: 'right' },
+        12: { halign: 'right' },
+        13: { halign: 'right' },
+        14: { halign: 'right' },
+        15: { halign: 'right' },
+        16: { fontStyle: 'bold', textColor: [204, 102, 0], halign: 'right', cellWidth: 16 }
       }
     });
   } else {
@@ -545,8 +603,8 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
         r.meterId,
         r.aliasName,
         r.yearMonth || options.periodLabel,
-        `${tot.toFixed(2)} kWh`,
-        `${(tot / 31).toFixed(2)} kWh/j`
+        `${formatPdfNumber(tot, 2)} kWh`,
+        `${formatPdfNumber(tot / 31, 2)} kWh/j`
       ];
     });
 
@@ -556,7 +614,11 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
       body: tableBody,
       theme: 'striped',
       headStyles: { fillColor: [28, 30, 38], textColor: [255, 170, 80], fontStyle: 'bold', fontSize: 8 },
-      styles: { fontSize: 8, cellPadding: 2 }
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: {
+        5: { halign: 'right' },
+        6: { halign: 'right' }
+      }
     });
   }
 
@@ -569,7 +631,7 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text("NIGELEC — DIRECTION FINANCIÈRE & COMPTABILITÉ DES VENTES D'ÉNERGIE", 14, 8);
+  doc.text("NIGELEC - DIRECTION FINANCIÈRE & COMPTABILITÉ DES VENTES D'ÉNERGIE", 14, 8);
 
   doc.setTextColor(20, 20, 20);
   doc.setFontSize(13);
@@ -587,16 +649,19 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
     startY: 26,
     head: [['Rubrique Fiscale & Tarifaire', 'Base de Calcul / Formule', 'Taux Légal', 'Montant Consolidé (FCFA)']],
     body: [
-      ['Part Énergie Pure (Hors Taxes)', 'Ventes TTC / (1 + 0.19)', 'Base HT', `${partHT.toLocaleString()} FCFA`],
-      ['Taxe sur la Valeur Ajoutée (TVA)', 'Loi Générale des Impôts Niger', '19.0%', `${tva.toLocaleString()} FCFA`],
-      ['Taxe de Développement ORTN', '3 FCFA par kWh consommé', '3 F / kWh', `${ortn.toLocaleString()} FCFA`],
-      ['Taxe Spéciale Habitat', '200 FCFA par transaction émise', '200 F / trans.', `${habitat.toLocaleString()} FCFA`],
-      ['Prime Fixe d\'Entretien Compteur', 'Grille Tarifaire Mensuelle', 'Forfaitaire', `${prime.toLocaleString()} FCFA`],
-      ['CHIFFRE D\'AFFAIRES TOTAL CONSOLIDÉ TTC', 'Somme Énergie + Taxes', 'TTC', `${totalRev.toLocaleString()} FCFA`]
+      ['Part Énergie Pure (Hors Taxes)', 'Ventes TTC / (1 + 0.19)', 'Base HT', formatPdfFcfa(partHT)],
+      ['Taxe sur la Valeur Ajoutée (TVA)', 'Loi Générale des Impôts Niger', '19.0%', formatPdfFcfa(tva)],
+      ['Taxe de Développement ORTN', '3 FCFA par kWh consommé', '3 F / kWh', formatPdfFcfa(ortn)],
+      ['Taxe Spéciale Habitat', '200 FCFA par transaction émise', '200 F / trans.', formatPdfFcfa(habitat)],
+      ['Prime Fixe d\'Entretien Compteur', 'Grille Tarifaire Mensuelle', 'Forfaitaire', formatPdfFcfa(prime)],
+      ['CHIFFRE D\'AFFAIRES TOTAL CONSOLIDÉ TTC', 'Somme Énergie + Taxes', 'TTC', formatPdfFcfa(totalRev)]
     ],
     theme: 'grid',
     headStyles: { fillColor: [255, 107, 53], textColor: [255, 255, 255], fontStyle: 'bold' },
-    styles: { fontSize: 8.5 }
+    styles: { fontSize: 8.5 },
+    columnStyles: {
+      3: { fontStyle: 'bold', halign: 'right' }
+    }
   });
 
   // Tableau Canaux de Paiement
@@ -610,14 +675,17 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
     startY: finY2 + 4,
     head: [['Canal Opérateur', 'Part (%)', 'Montant Transigé (FCFA)', 'Statut de Compensation']],
     body: [
-      ['Orange Money Niger (+227)', '58.0%', `${Math.round(totalRev * 0.58).toLocaleString()} FCFA`, 'COMPENSÉ BANCAIREMENT'],
-      ['Airtel Money Niger (+227)', '42.0%', `${Math.round(totalRev * 0.42).toLocaleString()} FCFA`, 'COMPENSÉ BANCAIREMENT'],
+      ['Orange Money Niger (+227)', '58.0%', formatPdfFcfa(Math.round(totalRev * 0.58)), 'COMPENSÉ BANCAIREMENT'],
+      ['Airtel Money Niger (+227)', '42.0%', formatPdfFcfa(Math.round(totalRev * 0.42)), 'COMPENSÉ BANCAIREMENT'],
       ['NITA & AMANA Express', '0.0%', '0 FCFA', 'EN VEILLE'],
       ['Guichets Agence & Cash', '0.0%', '0 FCFA', 'CLÔTURE VALIDÉE']
     ],
     theme: 'striped',
     headStyles: { fillColor: [28, 30, 38], textColor: [255, 170, 80], fontStyle: 'bold' },
-    styles: { fontSize: 8.5 }
+    styles: { fontSize: 8.5 },
+    columnStyles: {
+      2: { fontStyle: 'bold', halign: 'right' }
+    }
   });
 
   // Tableau Segments Tarifaires NIGELEC
@@ -631,16 +699,20 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
     startY: finY3 + 4,
     head: [['Code Segment', 'Désignation Tarifaire', 'Tarif de Base', 'Volume (kWh)', 'Recettes (FCFA)']],
     body: [
-      ['TS', 'Tranche Sociale (≤ 50 kWh)', '59.43 FCFA/kWh', '0.00 kWh', '0 FCFA'],
-      ['BT-D', 'Domestique Basse Tension (3 à 6 kW)', '79.25 FCFA/kWh', `${(totalKwh * 0.42).toFixed(2)} kWh`, `${Math.round(totalRev * 0.42).toLocaleString()} FCFA`],
-      ['BT-P', 'Professionnel / Commercial (≥ 6 kW)', '98.50 FCFA/kWh', `${(totalKwh * 0.58).toFixed(2)} kWh`, `${Math.round(totalRev * 0.58).toLocaleString()} FCFA`],
+      ['TS', 'Tranche Sociale (<= 50 kWh)', '59.43 FCFA/kWh', '0.00 kWh', '0 FCFA'],
+      ['BT-D', 'Domestique Basse Tension (3 à 6 kW)', '79.25 FCFA/kWh', `${formatPdfNumber(totalKwh * 0.42, 2)} kWh`, formatPdfFcfa(Math.round(totalRev * 0.42))],
+      ['BT-P', 'Professionnel / Commercial (>= 6 kW)', '98.50 FCFA/kWh', `${formatPdfNumber(totalKwh * 0.58, 2)} kWh`, formatPdfFcfa(Math.round(totalRev * 0.58))],
       ['MT-G', 'Moyenne Tension / Industriel', '89.19 FCFA/kWh', '0.00 kWh', '0 FCFA'],
       ['HT', 'Haute Tension (Grands Comptes)', '68.50 FCFA/kWh', '0.00 kWh', '0 FCFA'],
       ['EP', 'Éclairage Public Communal', '75.00 FCFA/kWh', '0.00 kWh', '0 FCFA']
     ],
     theme: 'grid',
     headStyles: { fillColor: [0, 166, 81], textColor: [255, 255, 255], fontStyle: 'bold' },
-    styles: { fontSize: 8 }
+    styles: { fontSize: 8 },
+    columnStyles: {
+      3: { halign: 'right' },
+      4: { fontStyle: 'bold', halign: 'right' }
+    }
   });
 
   // ─── SCEAU NUMÉRIQUE & SIGNATURES ─────────────────────────────────
@@ -670,7 +742,7 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
 
   // Sauvegarde et téléchargement automatique
   const fileName = `Rapport_Consolide_NIGELEC_${options.zone.replace(/[^a-zA-Z0-9]/g, '_')}_${options.periodLabel.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-  doc.save(fileName);
+  savePdfDoc(doc, fileName);
   return doc;
 };
 
@@ -891,7 +963,7 @@ export const generateReceiptPDF = (ticket: any) => {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.text(`Réf. Trans : ${ticket.txId || 'TX-' + Date.now()}`, 5, 34);
-  doc.text(`Date : ${new Date(ticket.timestamp || Date.now()).toLocaleString('fr-FR')}`, 5, 39);
+  doc.text(`Date : ${format(new Date(ticket.timestamp || Date.now()), 'dd/MM/yyyy HH:mm:ss')}`, 5, 39);
   doc.text(`Compteur : ${ticket.meterId}`, 5, 44);
   doc.text(`Abonné : ${ticket.customerName || 'Abonné NIGELEC'}`, 5, 49);
   doc.text(`Zone : ${ticket.location || 'Réseau National'}`, 5, 54);

@@ -6,6 +6,7 @@ import { CustomerController } from '../controllers/customer.controller';
 import { MeterController } from '../controllers/meter.controller';
 import { STSController } from '../controllers/sts.controller';
 import { Vending2Controller } from '../controllers/vending2.controller';
+import { vending2Service } from '../services/vending2.service';
 import { StatisticsController } from '../controllers/statistics.controller';
 import { auditService } from '../services/audit.service';
 import {

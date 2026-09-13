@@ -170,7 +170,7 @@ export const PaymentsSection = ({ payments, tokens = [], currentShift, pastShift
   }, [payments, totalVolume]);
 
   const operatorStatsList = useMemo(() => {
-    return Object.values(operatorStats).filter(c => c.count > 0 || ['Airtel Money Niger', 'Orange Money Niger', 'Encaissements Espèces'].includes(c.name));
+    return Object.values(operatorStats).filter((c: any) => c.count > 0 || ['Airtel Money Niger', 'Orange Money Niger', 'Encaissements Espèces'].includes(c.name));
   }, [operatorStats]);
 
   // Temps écoulé du shift
