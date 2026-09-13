@@ -81,22 +81,6 @@ export const StatisticsController = {
             } catch (e) {}
           }
 
-          // Intégrer les recharges d'énergie STS livrées au compteur (tokens)
-          const meterTokens = await db.prepare(`
-            SELECT timestamp, kwh 
-            FROM tokens
-            WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
-          `).all(m.meterId, startDate, endDate) as any[];
-
-          for (const tok of meterTokens) {
-            try {
-              const dateObj = new Date(tok.timestamp);
-              const monthNum = dateObj.getUTCMonth() + 1; // 1-12
-              if (monthNum >= 1 && monthNum <= 12) {
-                monthsMap[monthNum] = +(monthsMap[monthNum] + (tok.kwh || 0)).toFixed(2);
-              }
-            } catch (e) {}
-          }
 
           // Extraction dynamique des données réelles de la base
           let zoneName = m.regionId || 'NIAMEY';
@@ -168,22 +152,6 @@ export const StatisticsController = {
             } catch (e) {}
           }
 
-          // Intégrer les recharges d'énergie STS livrées au compteur (tokens)
-          const meterTokens = await db.prepare(`
-            SELECT timestamp, kwh 
-            FROM tokens
-            WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
-          `).all(m.meterId, startDate, endDate) as any[];
-
-          for (const tok of meterTokens) {
-            try {
-              const dateObj = new Date(tok.timestamp);
-              const dayNum = dateObj.getUTCDate();
-              if (dayNum >= 1 && dayNum <= 31) {
-                daysMap[dayNum] = +(daysMap[dayNum] + (tok.kwh || 0)).toFixed(2);
-              }
-            } catch (e) {}
-          }
 
           // Extraction dynamique des données réelles de la base
           let zoneName = m.regionId || 'NIAMEY';
@@ -264,23 +232,11 @@ export const StatisticsController = {
           WHERE meterId = ? AND timestamp >= ? AND timestamp <= ?
         `).all(meterId, `${yearMonth}-01T00:00:00.000Z`, `${yearMonth}-${daysInMonth}T23:59:59.999Z`) as any[];
 
-        const currentTokens = await db.prepare(`
-          SELECT timestamp, kwh 
-          FROM tokens
-          WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
-        `).all(meterId, `${yearMonth}-01T00:00:00.000Z`, `${yearMonth}-${daysInMonth}T23:59:59.999Z`) as any[];
-
         const prevDaysInMonth = new Date(prevYear, prevMonth, 0).getDate();
         const prevData = await db.prepare(`
           SELECT timestamp, consumption 
           FROM interval_data
           WHERE meterId = ? AND timestamp >= ? AND timestamp <= ?
-        `).all(meterId, `${prevYearMonth}-01T00:00:00.000Z`, `${prevYearMonth}-${prevDaysInMonth}T23:59:59.999Z`) as any[];
-
-        const prevTokens = await db.prepare(`
-          SELECT timestamp, kwh 
-          FROM tokens
-          WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
         `).all(meterId, `${prevYearMonth}-01T00:00:00.000Z`, `${prevYearMonth}-${prevDaysInMonth}T23:59:59.999Z`) as any[];
 
         const currentDaysMap: Record<number, number> = {};
@@ -294,18 +250,10 @@ export const StatisticsController = {
           const day = new Date(item.timestamp).getUTCDate();
           if (day >= 1 && day <= 31) currentDaysMap[day] += item.consumption || 0;
         });
-        currentTokens.forEach(item => {
-          const day = new Date(item.timestamp).getUTCDate();
-          if (day >= 1 && day <= 31) currentDaysMap[day] += item.kwh || 0;
-        });
 
         prevData.forEach(item => {
           const day = new Date(item.timestamp).getUTCDate();
           if (day >= 1 && day <= 31) prevDaysMap[day] += item.consumption || 0;
-        });
-        prevTokens.forEach(item => {
-          const day = new Date(item.timestamp).getUTCDate();
-          if (day >= 1 && day <= 31) prevDaysMap[day] += item.kwh || 0;
         });
 
         const series = [];
@@ -353,22 +301,10 @@ export const StatisticsController = {
           WHERE meterId = ? AND timestamp >= ? AND timestamp <= ?
         `).all(meterId, `${year}-01-01T00:00:00.000Z`, `${year}-12-31T23:59:59.999Z`) as any[];
 
-        const thisYearTokens = await db.prepare(`
-          SELECT timestamp, kwh 
-          FROM tokens
-          WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
-        `).all(meterId, `${year}-01-01T00:00:00.000Z`, `${year}-12-31T23:59:59.999Z`) as any[];
-
         const lastYearData = await db.prepare(`
           SELECT timestamp, consumption 
           FROM interval_data
           WHERE meterId = ? AND timestamp >= ? AND timestamp <= ?
-        `).all(meterId, `${prevYear}-01-01T00:00:00.000Z`, `${prevYear}-12-31T23:59:59.999Z`) as any[];
-
-        const lastYearTokens = await db.prepare(`
-          SELECT timestamp, kwh 
-          FROM tokens
-          WHERE meterId = ? AND timestamp >= ? AND timestamp <= ? AND kwh > 0
         `).all(meterId, `${prevYear}-01-01T00:00:00.000Z`, `${prevYear}-12-31T23:59:59.999Z`) as any[];
 
         const thisYearMonths: number[] = new Array(12).fill(0);
@@ -378,18 +314,10 @@ export const StatisticsController = {
           const m = new Date(item.timestamp).getUTCMonth();
           thisYearMonths[m] += item.consumption || 0;
         });
-        thisYearTokens.forEach(item => {
-          const m = new Date(item.timestamp).getUTCMonth();
-          thisYearMonths[m] += item.kwh || 0;
-        });
 
         lastYearData.forEach(item => {
           const m = new Date(item.timestamp).getUTCMonth();
           lastYearMonths[m] += item.consumption || 0;
-        });
-        lastYearTokens.forEach(item => {
-          const m = new Date(item.timestamp).getUTCMonth();
-          lastYearMonths[m] += item.kwh || 0;
         });
 
         const series = MONTH_NAMES.map((name, idx) => {
