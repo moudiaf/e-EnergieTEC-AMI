@@ -545,7 +545,7 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
   if (options.reportMode === 'monthly') {
     const tableHead = ['Zone', 'Abonné', 'N° Compteur', 'Alias', ...monthNamesShort, 'Total Année'];
     const tableBody: any[] = options.rows.map(r => {
-      const monthVals = monthNamesShort.map((_, i) => formatPdfNumber(r.months?.[i + 1] || 0, 0));
+      const monthVals = monthNamesShort.map((_, i) => formatPdfNumber(r.months?.[i + 1] || 0, 2));
       return [
         r.zoneName,
         r.userName,
@@ -557,7 +557,7 @@ export const generateConsolidatedStatisticsReportPDF = (options: ConsolidatedRep
     });
 
     // Total row with colSpan: 4 to prevent wrapping
-    const totalRowMonths = monthNamesShort.map((_, i) => formatPdfNumber(options.columnTotals[i + 1] || 0, 0));
+    const totalRowMonths = monthNamesShort.map((_, i) => formatPdfNumber(options.columnTotals[i + 1] || 0, 2));
     const grandTotal = options.rows.reduce((s, r) => s + (r.totalYearKwh || 0), 0);
     tableBody.push([
       { content: 'TOTAL CONSOLIDÉ', colSpan: 4, styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 243, 246], textColor: [20, 20, 20] } },

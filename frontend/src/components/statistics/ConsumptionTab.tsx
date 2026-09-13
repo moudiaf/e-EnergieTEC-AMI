@@ -493,7 +493,7 @@ export const ConsumptionTab: React.FC = () => {
                               key={i + 1} 
                               className="p-2 text-center text-gray-300 font-mono"
                             >
-                              {mVal.toFixed(0)}
+                              {mVal.toFixed(2)}
                             </td>
                           );
                         })}
@@ -516,7 +516,7 @@ export const ConsumptionTab: React.FC = () => {
                         const colSum = columnTotals[i + 1] || 0;
                         return (
                           <td key={i + 1} className="p-2 text-center text-orange-400 font-mono">
-                            {colSum.toFixed(0)}
+                            {colSum.toFixed(2)}
                           </td>
                         );
                       })}
@@ -579,7 +579,7 @@ export const ConsumptionTab: React.FC = () => {
                               key={i + 1} 
                               className="p-2 text-center text-gray-300 font-mono"
                             >
-                              {dayVal.toFixed(0)}
+                              {dayVal.toFixed(2)}
                             </td>
                           );
                         })}
@@ -602,7 +602,7 @@ export const ConsumptionTab: React.FC = () => {
                         const colSum = columnTotals[i + 1] || 0;
                         return (
                           <td key={i + 1} className="p-2 text-center text-orange-400 font-mono">
-                            {colSum.toFixed(0)}
+                            {colSum.toFixed(2)}
                           </td>
                         );
                       })}
